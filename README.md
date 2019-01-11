@@ -1,10 +1,11 @@
-Switch Core: Service Management for configuration and data
+Switch Firmware: Service Management for configuration and data
 ==========================================================
 
 Switch core service responsible for:
 * Getting configuration from the GTB server
 * Installing/Removing/Starting switch services
-* Split server command between services
+* Control drivers
+* Control groups
 * Agregating switch status and send it back to the GTB server
 
 Build Requirement: 
@@ -40,16 +41,16 @@ To compile it:
 
 * To build x86 target:
 ```
-    make bin/sensorservice-amd64
+    make bin/energieip-swh200-firmware-amd64
 ```
 
 * To build armhf target:
 ```
-    make bin/sensorservice-armhf
+    make bin/energieip-swh200-firmware-armhf
 ```
 * To create debian archive for x86:
 ```
-    make deb-amd64
+    make deb-armhf
 ```
 
 * To install debian archive on the target:
@@ -61,5 +62,4 @@ To compile it:
 
 For development:
 * recommanded logger: *rlog*
-* For network connection: use *common-network-go* library
-* For database management: use *common-database-go* library
+* For dependency: use *common-components-go* library
