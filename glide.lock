@@ -1,0 +1,66 @@
+hash: d411425b4f9db07589085d22323989d1ba481bfb0dd3cddbcc5288ab094b4b65
+updated: 2019-01-11T12:07:31.926230775+01:00
+imports:
+- name: github.com/cenkalti/backoff
+  version: 1e4cf3da559842a91afcb6ea6141451e6c30c618
+- name: github.com/eclipse/paho.mqtt.golang
+  version: 379fd9f99ba5b1f02c9fffb5e5952416ef9301dc
+  subpackages:
+  - packets
+- name: github.com/energieip/common-components-go
+  version: a8d903a763cd4ce59142160bd0fc80c06a9303e2
+  subpackages:
+  - pkg/database
+  - pkg/dgroup
+  - pkg/dled
+  - pkg/dsensor
+  - pkg/dswitch
+  - pkg/network
+  - pkg/service
+- name: github.com/energieip/common-tools-go
+  version: e984ad0511951c4e76e0145ed686128121575be8
+  subpackages:
+  - pkg/tools
+- name: github.com/golang/protobuf
+  version: 347cf4a86c1cb8d262994d8ef5924d4576c5b331
+  subpackages:
+  - proto
+- name: github.com/hailocab/go-hostpool
+  version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
+- name: github.com/konsorten/go-windows-terminal-sequences
+  version: 5c8c8bd35d3832f5d134ae1e1e375b69a4d25242
+- name: github.com/opentracing/opentracing-go
+  version: 8b5a441dc60e8d9bb9bf9d22060b6d94fa599983
+  subpackages:
+  - ext
+  - log
+- name: github.com/romana/rlog
+  version: f018bc92e7d71f27c04e04cbf008860416c21d01
+- name: github.com/sirupsen/logrus
+  version: eef6b768ab01a0598a0a6db97bad2a37d31df1d1
+- name: golang.org/x/crypto
+  version: ff983b9c42bc9fbf91556e191cc8efb585c16908
+  subpackages:
+  - pbkdf2
+  - ssh/terminal
+- name: golang.org/x/net
+  version: 915654e7eabcea33ae277abbecf52f0d8b7a9fdc
+  subpackages:
+  - context
+  - internal/socks
+  - proxy
+  - websocket
+- name: golang.org/x/sys
+  version: 48ac38b7c8cbedd50b1613c0fccacfc7d88dfcdf
+  subpackages:
+  - unix
+  - windows
+- name: gopkg.in/fatih/pool.v2
+  version: 010e0b745d12eaf8426c95f9c3924d81dd0b668f
+- name: gopkg.in/rethinkdb/rethinkdb-go.v5
+  version: 442075482543497ce5f159d3dea451dc43bd1c0a
+  subpackages:
+  - encoding
+  - ql2
+  - types
+testImports: []
