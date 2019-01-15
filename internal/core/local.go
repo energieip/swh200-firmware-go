@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/energieip/common-components-go/pkg/dblind"
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
 	genericNetwork "github.com/energieip/common-components-go/pkg/network"
@@ -32,6 +33,8 @@ func (s *Service) localConnection(conf pkg.ServiceConfig, clientID string) error
 	cbkLocal["/read/led/+/"+dl.UrlStatus] = s.onLedStatus
 	cbkLocal["/read/sensor/+/"+ds.UrlHello] = s.onSensorHello
 	cbkLocal["/read/sensor/+/"+ds.UrlStatus] = s.onSensorStatus
+	cbkLocal["/read/blind/+/"+dblind.UrlHello] = s.onBlindHello
+	cbkLocal["/read/blind/+/"+dblind.UrlStatus] = s.onBlindStatus
 	confLocal := genericNetwork.NetworkConfig{
 		IP:               conf.LocalBroker.IP,
 		Port:             conf.LocalBroker.Port,
