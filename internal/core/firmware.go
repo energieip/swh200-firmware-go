@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/energieip/common-components-go/pkg/dblind"
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
 	sd "github.com/energieip/common-components-go/pkg/dswitch"
@@ -43,6 +44,7 @@ type Service struct {
 	leds                  map[string]dl.Led
 	sensors               map[string]ds.Sensor
 	groups                map[int]Group
+	blinds                map[string]dblind.Blind
 }
 
 //Initialize service
@@ -52,6 +54,7 @@ func (s *Service) Initialize(confFile string) error {
 	s.events = make(chan string)
 	s.leds = make(map[string]dl.Led)
 	s.sensors = make(map[string]ds.Sensor)
+	s.blinds = make(map[string]dblind.Blind)
 	s.groups = make(map[int]Group)
 
 	conf, err := pkg.ReadServiceConfig(confFile)
@@ -166,6 +169,7 @@ func (s *Service) sendDump() {
 	status.Services = services
 	status.Leds = s.getStatusLeds()
 	status.Sensors = s.getStatusSensors()
+	status.Blinds = s.getStatusBlinds()
 	status.Groups = s.getStatusGroup()
 
 	dump, err := status.ToJSON()
@@ -198,6 +202,14 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 		s.updateSensorConfig(sensor)
 	}
 
+	for _, blind := range switchConfig.BlindsSetup {
+		s.prepareBlindSetup(blind)
+	}
+
+	for _, blind := range switchConfig.BlindsConfig {
+		s.updateBlindConfig(blind)
+	}
+
 	for grID, group := range switchConfig.Groups {
 		if _, ok := s.groups[grID]; !ok {
 			rlog.Info("Group " + strconv.Itoa(grID) + " create it")
@@ -222,6 +234,10 @@ func (s *Service) removeConfiguration(switchConfig sd.SwitchConfig) {
 
 	for sensorMac := range switchConfig.SensorsConfig {
 		s.removeSensor(sensorMac)
+	}
+
+	for blindMac := range switchConfig.BlindsConfig {
+		s.removeBlind(blindMac)
 	}
 }
 

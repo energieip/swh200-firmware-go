@@ -1,5 +1,5 @@
 hash: d411425b4f9db07589085d22323989d1ba481bfb0dd3cddbcc5288ab094b4b65
-updated: 2019-01-11T12:07:31.926230775+01:00
+updated: 2019-01-14T21:50:45.504605668+01:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 1e4cf3da559842a91afcb6ea6141451e6c30c618
@@ -8,9 +8,10 @@ imports:
   subpackages:
   - packets
 - name: github.com/energieip/common-components-go
-  version: a8d903a763cd4ce59142160bd0fc80c06a9303e2
+  version: 42b5b489d0123d3c77ca9fef7d50ed6e1bbb1e84
   subpackages:
   - pkg/database
+  - pkg/dblind
   - pkg/dgroup
   - pkg/dled
   - pkg/dsensor
@@ -37,7 +38,7 @@ imports:
 - name: github.com/romana/rlog
   version: f018bc92e7d71f27c04e04cbf008860416c21d01
 - name: github.com/sirupsen/logrus
-  version: eef6b768ab01a0598a0a6db97bad2a37d31df1d1
+  version: 78fb3852d92683dc28da6cc3d5f965100677c27d
 - name: golang.org/x/crypto
   version: ff983b9c42bc9fbf91556e191cc8efb585c16908
   subpackages:
@@ -51,7 +52,7 @@ imports:
   - proxy
   - websocket
 - name: golang.org/x/sys
-  version: 48ac38b7c8cbedd50b1613c0fccacfc7d88dfcdf
+  version: 2be51725563103c17124a318f1745b66f2347acb
   subpackages:
   - unix
   - windows

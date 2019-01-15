@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/energieip/common-components-go/pkg/database"
+	"github.com/energieip/common-components-go/pkg/dblind"
 	gm "github.com/energieip/common-components-go/pkg/dgroup"
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
@@ -39,10 +40,12 @@ func (s *Service) connectDatabase(ip, port string) error {
 			tableCfg[dl.TableName] = dl.LedSetup{}
 			tableCfg[ds.TableName] = ds.SensorSetup{}
 			tableCfg[gm.TableStatusName] = gm.GroupConfig{}
+			tableCfg[dblind.TableName] = dblind.BlindSetup{}
 		} else {
 			tableCfg[dl.TableName] = dl.Led{}
 			tableCfg[ds.TableName] = ds.Sensor{}
 			tableCfg[gm.TableStatusName] = gm.GroupStatus{}
+			tableCfg[dblind.TableName] = dblind.Blind{}
 		}
 		for tableName, objs := range tableCfg {
 			err = db.CreateTable(dbName, tableName, &objs)
@@ -103,32 +106,20 @@ func (s *Service) getStatusSensors() map[string]ds.Sensor {
 	return sensors
 }
 
-func (s *Service) getSensorStatus(mac string) *ds.Sensor {
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = mac
-	sensorStored, err := s.db.GetRecord(ds.DbStatus, ds.TableName, criteria)
-	if err != nil || sensorStored == nil {
-		return nil
+func (s *Service) getStatusBlinds() map[string]dblind.Blind {
+	drivers := make(map[string]dblind.Blind)
+	stored, err := s.db.FetchAllRecords(dblind.DbStatus, dblind.TableName)
+	if err != nil || stored == nil {
+		return drivers
 	}
-	cell, err := ds.ToSensor(sensorStored)
-	if err != nil {
-		return nil
+	for _, v := range stored {
+		driver, err := dblind.ToBlind(v)
+		if err != nil {
+			continue
+		}
+		drivers[driver.Mac] = *driver
 	}
-	return cell
-}
-
-func (s *Service) getStatusLed(mac string) *dl.Led {
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = mac
-	ledStored, err := s.db.GetRecord(dl.DbStatus, dl.TableName, criteria)
-	if err != nil || ledStored == nil {
-		return nil
-	}
-	light, err := dl.ToLed(ledStored)
-	if err != nil {
-		return nil
-	}
-	return light
+	return drivers
 }
 
 func (s *Service) getConfigLed(mac string) *dl.LedSetup {
@@ -143,6 +134,20 @@ func (s *Service) getConfigLed(mac string) *dl.LedSetup {
 		return nil
 	}
 	return light
+}
+
+func (s *Service) getConfigBlind(mac string) *dblind.BlindSetup {
+	criteria := make(map[string]interface{})
+	criteria["Mac"] = mac
+	stored, err := s.db.GetRecord(dblind.DbConfig, dblind.TableName, criteria)
+	if err != nil || stored == nil {
+		return nil
+	}
+	driver, err := dblind.ToBlindSetup(stored)
+	if err != nil {
+		return nil
+	}
+	return driver
 }
 
 func (s *Service) getConfigSensor(mac string) *ds.SensorSetup {

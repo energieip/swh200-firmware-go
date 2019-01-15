@@ -15,22 +15,25 @@ const (
 	EventChange = "change"
 	EventStop   = "stop"
 	EventManual = "manual"
+	EventBlind  = "blind"
 )
 
 // Group logical
 type Group struct {
-	Event           chan map[string]*gm.GroupConfig
-	Runtime         gm.GroupConfig
-	Setpoint        int
-	Brightness      int
-	Presence        bool
-	Slope           int
-	TimeToAuto      int
-	Scale           int    //brightness correction scale
-	DbID            string //Database entry ID
-	PresenceTimeout int
-	Error           int
-	Sensors         map[string]SensorEvent
+	Event              chan map[string]*gm.GroupConfig
+	Runtime            gm.GroupConfig
+	Setpoint           int
+	Brightness         int
+	Presence           bool
+	Slope              int
+	TimeToAuto         int
+	Scale              int    //brightness correction scale
+	DbID               string //Database entry ID
+	PresenceTimeout    int
+	Error              int
+	Sensors            map[string]SensorEvent
+	SetpointBlinds     *int
+	SetpointSlatBlinds *int
 }
 
 func (s *Service) onGroupSensorEvent(client network.Client, msg network.Message) {
@@ -138,6 +141,10 @@ func (s *Service) groupRun(group *Group) error {
 						group.TimeToAuto = *group.Runtime.Watchdog
 						s.setpointLed(group)
 						s.dumpGroupStatus(*group)
+
+					case EventBlind:
+						rlog.Info("Received blind event ", group)
+						s.setpointBlind(group, group.SetpointBlinds, group.SetpointSlatBlinds)
 					}
 				}
 			case <-ticker.C:
@@ -252,6 +259,12 @@ func (s *Service) setpointLed(group *Group) {
 	}
 }
 
+func (s *Service) setpointBlind(group *Group, blind *int, slat *int) {
+	for _, driver := range group.Runtime.Blinds {
+		s.sendBlindGroupSetpoint(driver, blind, slat)
+	}
+}
+
 func (s *Service) createGroup(runtime gm.GroupConfig) {
 	if runtime.Auto == nil {
 		auto := true
@@ -315,6 +328,16 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 			gr.Setpoint = *new.SetpointLeds
 			event := make(map[string]*gm.GroupConfig)
 			event[EventManual] = nil
+			gr.Event <- event
+		}()
+	}
+
+	if new.SetpointSlatBlinds != nil || new.SetpointBlinds != nil {
+		go func() {
+			gr.SetpointSlatBlinds = new.SetpointSlatBlinds
+			gr.SetpointBlinds = new.SetpointBlinds
+			event := make(map[string]*gm.GroupConfig)
+			event[EventBlind] = new
 			gr.Event <- event
 		}()
 	}
