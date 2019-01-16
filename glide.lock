@@ -1,5 +1,5 @@
 hash: d411425b4f9db07589085d22323989d1ba481bfb0dd3cddbcc5288ab094b4b65
-updated: 2019-01-15T20:25:58.331488674+01:00
+updated: 2019-01-16T18:38:55.822741749+01:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 1e4cf3da559842a91afcb6ea6141451e6c30c618
@@ -8,7 +8,7 @@ imports:
   subpackages:
   - packets
 - name: github.com/energieip/common-components-go
-  version: 613a52b03a50c36c80518da80595010534120e38
+  version: 97a7f6d1cec0109e39d6a26610a5ae530e0fd598
   subpackages:
   - pkg/database
   - pkg/dblind
@@ -52,7 +52,7 @@ imports:
   - proxy
   - websocket
 - name: golang.org/x/sys
-  version: a457fd036447854c0c02e89ea439481bdcf941a2
+  version: 11f53e03133963fb11ae0588e08b5e0b85be8be5
   subpackages:
   - unix
   - windows
