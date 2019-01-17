@@ -219,6 +219,12 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 		rlog.Info("Group " + strconv.Itoa(grID) + " reload it")
 		s.reloadGroupConfig(grID, group)
 	}
+
+	rlog.Info("++++++++ update cluster ", switchConfig.ClusterBroker)
+	if len(switchConfig.ClusterBroker) > 0 {
+		rlog.Info("== update cluster ", switchConfig.ClusterBroker)
+		s.updateClusterConfig(switchConfig.ClusterBroker)
+	}
 }
 
 func (s *Service) removeConfiguration(switchConfig sd.SwitchConfig) {

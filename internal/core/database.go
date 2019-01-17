@@ -6,10 +6,15 @@ import (
 	gm "github.com/energieip/common-components-go/pkg/dgroup"
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
+	pkg "github.com/energieip/common-components-go/pkg/service"
 	"github.com/romana/rlog"
 )
 
 type Database = database.DatabaseInterface
+
+const (
+	TableCluster = "clusters"
+)
 
 func (s *Service) connectDatabase(ip, port string) error {
 	db, err := database.NewDatabase(database.RETHINKDB)
@@ -41,6 +46,7 @@ func (s *Service) connectDatabase(ip, port string) error {
 			tableCfg[ds.TableName] = ds.SensorSetup{}
 			tableCfg[gm.TableStatusName] = gm.GroupConfig{}
 			tableCfg[dblind.TableName] = dblind.BlindSetup{}
+			tableCfg[TableCluster] = pkg.Broker{}
 		} else {
 			tableCfg[dl.TableName] = dl.Led{}
 			tableCfg[ds.TableName] = ds.Sensor{}
@@ -73,6 +79,7 @@ func (s *Service) resetDB() error {
 			tableCfg[ds.TableName] = ds.SensorSetup{}
 			tableCfg[gm.TableStatusName] = gm.GroupConfig{}
 			tableCfg[dblind.TableName] = dblind.BlindSetup{}
+			tableCfg[TableCluster] = pkg.Broker{}
 		} else {
 			tableCfg[dl.TableName] = dl.Led{}
 			tableCfg[ds.TableName] = ds.Sensor{}
@@ -229,4 +236,23 @@ func (s *Service) updateGroupStatus(status gm.GroupStatus) error {
 		err = s.db.UpdateRecord(gm.DbStatusName, gm.TableStatusName, dbID, status)
 	}
 	return err
+}
+
+func (s *Service) updateClusterConfig(cluster map[string]pkg.Broker) error {
+	var res error
+	for name, elt := range cluster {
+		criteria := make(map[string]interface{})
+		criteria["Name"] = name
+		var err error
+		dbID := s.getObjectID(dl.DbConfig, TableCluster, criteria)
+		if dbID == "" {
+			_, err = s.db.InsertRecord(dl.DbConfig, TableCluster, elt)
+		} else {
+			err = s.db.UpdateRecord(dl.DbConfig, TableCluster, dbID, elt)
+		}
+		if err != nil {
+			res = err
+		}
+	}
+	return res
 }
