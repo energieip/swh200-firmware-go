@@ -28,6 +28,7 @@ func (s *Service) createClusterNetwork() error {
 func (s *Service) remoteClusterConnection(conf pkg.ServiceConfig, clientID string) error {
 	cbkServer := make(map[string]func(genericNetwork.Client, genericNetwork.Message))
 	cbkServer["/read/group/+/events/sensor"] = s.onGroupSensorEvent
+	cbkServer["/write/group/+/commands"] = s.onGroupCommand
 	//TODO fix here cluster connection
 	confServer := genericNetwork.NetworkConfig{
 		IP:               conf.NetworkBroker.IP,

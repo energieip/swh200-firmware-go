@@ -58,6 +58,43 @@ func (s *Service) connectDatabase(ip, port string) error {
 	return nil
 }
 
+func (s *Service) resetDB() error {
+	var res error
+	for _, dbName := range []string{dl.DbConfig, dl.DbStatus} {
+		err := s.db.CreateDB(dbName)
+		if err != nil {
+			rlog.Warn("Create DB ", err.Error())
+			res = err
+		}
+
+		tableCfg := make(map[string]interface{})
+		if dbName == dl.DbConfig {
+			tableCfg[dl.TableName] = dl.LedSetup{}
+			tableCfg[ds.TableName] = ds.SensorSetup{}
+			tableCfg[gm.TableStatusName] = gm.GroupConfig{}
+			tableCfg[dblind.TableName] = dblind.BlindSetup{}
+		} else {
+			tableCfg[dl.TableName] = dl.Led{}
+			tableCfg[ds.TableName] = ds.Sensor{}
+			tableCfg[gm.TableStatusName] = gm.GroupStatus{}
+			tableCfg[dblind.TableName] = dblind.Blind{}
+		}
+		for tableName, objs := range tableCfg {
+			err = s.db.DropTable(dbName, tableName)
+			if err != nil {
+				rlog.Warn("Cannot drop table ", err.Error())
+				continue
+			}
+			err = s.db.CreateTable(dbName, tableName, &objs)
+			if err != nil {
+				rlog.Warn("Create table ", err.Error())
+				res = err
+			}
+		}
+	}
+	return res
+}
+
 func (s *Service) dbClose() error {
 	return s.db.Close()
 }

@@ -35,6 +35,7 @@ func (s *Service) localConnection(conf pkg.ServiceConfig, clientID string) error
 	cbkLocal["/read/sensor/+/"+ds.UrlStatus] = s.onSensorStatus
 	cbkLocal["/read/blind/+/"+dblind.UrlHello] = s.onBlindHello
 	cbkLocal["/read/blind/+/"+dblind.UrlStatus] = s.onBlindStatus
+	cbkLocal["/write/switch/commands"] = s.onSwitchCmd
 	confLocal := genericNetwork.NetworkConfig{
 		IP:               conf.LocalBroker.IP,
 		Port:             conf.LocalBroker.Port,

@@ -301,6 +301,13 @@ func (s *Service) Run() error {
 						s.isConfigured = *event.IsConfigured
 						s.friendlyName = s.mac
 						s.timerDump = DefaultTimerDump
+						if !s.isConfigured {
+							rlog.Warn("Received Reset: Stop group and reset database")
+							for _, group := range s.groups {
+								s.deleteGroup(group.Runtime)
+							}
+							s.resetDB()
+						}
 					}
 					if !s.isConfigured {
 						//a reset is performed

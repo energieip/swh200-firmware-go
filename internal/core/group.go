@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/energieip/common-components-go/pkg/dgroup"
 	gm "github.com/energieip/common-components-go/pkg/dgroup"
 	"github.com/energieip/common-components-go/pkg/network"
 	"github.com/romana/rlog"
@@ -369,4 +370,33 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 	if new.Watchdog != nil {
 		gr.Runtime.Watchdog = new.Watchdog
 	}
+}
+
+func (s *Service) onGroupCommand(client network.Client, msg network.Message) {
+	payload := msg.Payload()
+	payloadStr := string(payload)
+	rlog.Info("Switch: Received topic: " + msg.Topic() + " payload: " + payloadStr)
+	var cmd SwitchCmd
+	err := json.Unmarshal(payload, &cmd)
+	if err != nil {
+		rlog.Error("Error during parsing", err.Error())
+		return
+	}
+	grID := cmd.Group
+	if _, ok := s.groups[grID]; !ok {
+		rlog.Info("Group " + strconv.Itoa(grID) + " not running on this switch skip it")
+		return
+	}
+	rlog.Info("Group " + strconv.Itoa(grID) + " reload it")
+	group := dgroup.GroupConfig{
+		Group:              cmd.Group,
+		SetpointLeds:       cmd.Leds,
+		SetpointSlatBlinds: cmd.Slats,
+		SetpointBlinds:     cmd.Blinds,
+	}
+	if cmd.Leds != nil {
+		auto := false
+		group.Auto = &auto
+	}
+	s.reloadGroupConfig(grID, group)
 }
