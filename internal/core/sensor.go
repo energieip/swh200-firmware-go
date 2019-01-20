@@ -176,4 +176,11 @@ func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 	} else {
 		rlog.Debug("sensor Event to Group has been sent to " + sensor.Mac + " on topic: " + url + " dump: " + dump)
 	}
+
+	err = s.localSendCommand(url, dump)
+	if err != nil {
+		rlog.Errorf("Cannot send sensor Event to Group on local broker" + sensor.Mac + " err: " + err.Error())
+	} else {
+		rlog.Debug("sensor Event to Group has been sent on local broker to " + sensor.Mac + " on topic: " + url + " dump: " + dump)
+	}
 }

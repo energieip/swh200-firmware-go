@@ -34,4 +34,11 @@ func (s *Service) onSwitchCmd(client network.Client, msg network.Message) {
 	} else {
 		rlog.Debug("Command to Group has been sent to " + strconv.Itoa(cmd.Group) + " on topic: " + url + " dump: " + payloadStr)
 	}
+
+	err = s.localSendCommand(url, payloadStr)
+	if err != nil {
+		rlog.Errorf("Cannot send command to Group on local broker" + strconv.Itoa(cmd.Group) + " err: " + err.Error())
+	} else {
+		rlog.Debug("sCommand to Group has been sent on local broker to " + strconv.Itoa(cmd.Group) + " on topic: " + url + " dump: " + payloadStr)
+	}
 }

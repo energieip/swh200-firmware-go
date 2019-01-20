@@ -80,7 +80,7 @@ func (s *Service) resetDB() error {
 			tableCfg[ds.TableName] = ds.SensorSetup{}
 			tableCfg[gm.TableStatusName] = gm.GroupConfig{}
 			tableCfg[dblind.TableName] = dblind.BlindSetup{}
-			tableCfg[TableCluster] = pkg.Broker{}
+			tableCfg[TableCluster] = sd.SwitchCluster{}
 		} else {
 			tableCfg[dl.TableName] = dl.Led{}
 			tableCfg[ds.TableName] = ds.Sensor{}
@@ -256,4 +256,21 @@ func (s *Service) updateClusterConfig(cluster map[string]sd.SwitchCluster) error
 		}
 	}
 	return res
+}
+
+func (s *Service) getClusterConfig() []sd.SwitchCluster {
+	var cluster []sd.SwitchCluster
+	stored, err := s.db.FetchAllRecords(dl.DbConfig, TableCluster)
+	if err != nil || stored == nil {
+		return cluster
+	}
+	for _, v := range stored {
+		cl, err := sd.ToSwitchCluster(v)
+		if err != nil {
+			continue
+		}
+		cluster = append(cluster, *cl)
+
+	}
+	return cluster
 }

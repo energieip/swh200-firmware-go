@@ -29,9 +29,9 @@ const (
 
 //Service content
 type Service struct {
-	server                ServerNetwork  //Remote server
-	local                 LocalNetwork   //local broker for drivers and services
-	cluster               ClusterNetwork //Share broker in the cluster
+	server                ServerNetwork             //Remote server
+	local                 LocalNetwork              //local broker for drivers and services
+	cluster               map[string]ClusterNetwork //Share broker in the cluster
 	db                    Database
 	mac                   string //Switch mac address
 	events                chan string
@@ -45,23 +45,27 @@ type Service struct {
 	sensors               map[string]ds.Sensor
 	groups                map[int]Group
 	blinds                map[string]dblind.Blind
+	conf                  pkg.ServiceConfig
+	clientID              string
 }
 
 //Initialize service
 func (s *Service) Initialize(confFile string) error {
 	hostname, _ := os.Hostname()
-	clientID := "Switch" + hostname
+	s.clientID = "Switch" + hostname
 	s.events = make(chan string)
 	s.leds = make(map[string]dl.Led)
 	s.sensors = make(map[string]ds.Sensor)
 	s.blinds = make(map[string]dblind.Blind)
 	s.groups = make(map[int]Group)
+	s.cluster = make(map[string]ClusterNetwork)
 
 	conf, err := pkg.ReadServiceConfig(confFile)
 	if err != nil {
 		rlog.Error("Cannot parse configuration file " + err.Error())
 		return err
 	}
+	s.conf = *conf
 
 	mac, ip := tools.GetNetworkInfo()
 	s.ip = ip
@@ -95,20 +99,24 @@ func (s *Service) Initialize(confFile string) error {
 		return err
 	}
 
-	err = s.localConnection(*conf, clientID)
+	err = s.localConnection()
 	if err != nil {
 		rlog.Error("Cannot connect to drivers broker " + conf.LocalBroker.IP + " error: " + err.Error())
 		return err
 	}
 
-	err = s.createClusterNetwork()
-	if err != nil {
-		rlog.Error("Cannot connect to broker " + conf.NetworkBroker.IP + " error: " + err.Error())
-		return err
+	clusters := s.getClusterConfig()
+	for _, cl := range clusters {
+		client, err := s.createClusterNetwork()
+		if err != nil {
+			rlog.Warn("Cannot create a connection to", cl.Mac, err.Error())
+			continue
+		}
+		s.cluster[cl.Mac] = client
+		go s.remoteClusterConnection(cl.IP, client)
 	}
-	go s.remoteClusterConnection(*conf, clientID+"group")
 
-	go s.remoteServerConnection(*conf, clientID)
+	go s.remoteServerConnection()
 	rlog.Info("SwitchCore service started")
 	return nil
 }

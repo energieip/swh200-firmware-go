@@ -4,7 +4,6 @@ import (
 	"time"
 
 	genericNetwork "github.com/energieip/common-components-go/pkg/network"
-	pkg "github.com/energieip/common-components-go/pkg/service"
 	"github.com/romana/rlog"
 )
 
@@ -13,45 +12,41 @@ type ClusterNetwork struct {
 	Iface genericNetwork.NetworkInterface
 }
 
-func (s *Service) createClusterNetwork() error {
+func (s *Service) createClusterNetwork() (ClusterNetwork, error) {
 	broker, err := genericNetwork.NewNetwork(genericNetwork.MQTT)
 	if err != nil {
-		return err
+		return ClusterNetwork{}, err
 	}
 	serverNet := ClusterNetwork{
 		Iface: broker,
 	}
-	s.cluster = serverNet
-	return nil
+	return serverNet, nil
 }
 
-func (s *Service) remoteClusterConnection(conf pkg.ServiceConfig, clientID string) error {
+func (s *Service) remoteClusterConnection(ip string, client ClusterNetwork) error {
 	cbkServer := make(map[string]func(genericNetwork.Client, genericNetwork.Message))
-	cbkServer["/read/group/+/events/sensor"] = s.onGroupSensorEvent
-	cbkServer["/write/group/+/commands"] = s.onGroupCommand
-	//TODO fix here cluster connection
 	confServer := genericNetwork.NetworkConfig{
-		IP:               conf.NetworkBroker.IP,
-		Port:             conf.NetworkBroker.Port,
-		ClientName:       clientID,
+		IP:               ip,
+		Port:             s.conf.NetworkBroker.Port,
+		ClientName:       s.clientID + "cluster",
 		Callbacks:        cbkServer,
-		LogLevel:         conf.LogLevel,
-		User:             conf.NetworkBroker.Login,
-		Password:         conf.NetworkBroker.Password,
-		ClientKey:        conf.NetworkBroker.KeyPath,
-		ServerCertificat: conf.NetworkBroker.CaPath,
+		LogLevel:         s.conf.LogLevel,
+		User:             s.conf.NetworkBroker.Login,
+		Password:         s.conf.NetworkBroker.Password,
+		ClientKey:        s.conf.NetworkBroker.KeyPath,
+		ServerCertificat: s.conf.NetworkBroker.CaPath,
 	}
 
 	for {
-		rlog.Info("Try to connect to " + conf.NetworkBroker.IP)
-		err := s.cluster.Iface.Initialize(confServer)
+		rlog.Info("Try to connect to " + ip)
+		err := client.Iface.Initialize(confServer)
 		if err == nil {
-			rlog.Info(clientID + " connected to server broker " + conf.NetworkBroker.IP)
+			rlog.Info(s.clientID + "cluster" + " connected to server broker " + ip)
 			return err
 		}
 		timer := time.NewTicker(time.Second)
-		rlog.Error("Cannot connect to broker " + conf.NetworkBroker.IP + " error: " + err.Error())
-		rlog.Error("Try to reconnect " + conf.NetworkBroker.IP + " in 1s")
+		rlog.Error("Cannot connect to broker " + ip + " error: " + err.Error())
+		rlog.Error("Try to reconnect " + ip + " in 1s")
 
 		select {
 		case <-timer.C:
@@ -61,9 +56,28 @@ func (s *Service) remoteClusterConnection(conf pkg.ServiceConfig, clientID strin
 }
 
 func (s *Service) clusterDisconnect() {
-	s.cluster.Iface.Disconnect()
+	for _, cl := range s.cluster {
+		cl.Iface.Disconnect()
+	}
 }
 
 func (s *Service) clusterSendCommand(topic, content string) error {
-	return s.cluster.Iface.SendCommand(topic, content)
+	var res error
+	for _, cl := range s.cluster {
+		err := cl.Iface.SendCommand(topic, content)
+		if err != nil {
+			res = err
+		}
+	}
+	return res
+}
+
+func (s *Service) removeClusterMember(mac string) error {
+	val, ok := s.cluster[mac]
+	if !ok {
+		return nil
+	}
+	val.Iface.Disconnect()
+	delete(s.cluster, mac)
+	return nil
 }

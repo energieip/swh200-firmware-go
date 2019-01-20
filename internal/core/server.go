@@ -6,7 +6,6 @@ import (
 
 	sd "github.com/energieip/common-components-go/pkg/dswitch"
 	genericNetwork "github.com/energieip/common-components-go/pkg/network"
-	pkg "github.com/energieip/common-components-go/pkg/service"
 	"github.com/romana/rlog"
 )
 
@@ -37,34 +36,34 @@ func (s *Service) createServerNetwork() error {
 }
 
 //RemoteServerConnection connect service to server broker
-func (s *Service) remoteServerConnection(conf pkg.ServiceConfig, clientID string) error {
+func (s *Service) remoteServerConnection() error {
 	cbkServer := make(map[string]func(genericNetwork.Client, genericNetwork.Message))
 	cbkServer["/write/switch/"+s.mac+"/setup/config"] = s.onSetup
 	cbkServer["/write/switch/"+s.mac+"/update/settings"] = s.onUpdateSetting
 	cbkServer["/remove/switch/"+s.mac+"/update/settings"] = s.onRemoveSetting
 
 	confServer := genericNetwork.NetworkConfig{
-		IP:               conf.NetworkBroker.IP,
-		Port:             conf.NetworkBroker.Port,
-		ClientName:       clientID,
+		IP:               s.conf.NetworkBroker.IP,
+		Port:             s.conf.NetworkBroker.Port,
+		ClientName:       s.clientID,
 		Callbacks:        cbkServer,
-		LogLevel:         conf.LogLevel,
-		User:             conf.NetworkBroker.Login,
-		Password:         conf.NetworkBroker.Password,
-		ClientKey:        conf.NetworkBroker.KeyPath,
-		ServerCertificat: conf.NetworkBroker.CaPath,
+		LogLevel:         s.conf.LogLevel,
+		User:             s.conf.NetworkBroker.Login,
+		Password:         s.conf.NetworkBroker.Password,
+		ClientKey:        s.conf.NetworkBroker.KeyPath,
+		ServerCertificat: s.conf.NetworkBroker.CaPath,
 	}
 
 	for {
-		rlog.Info("Try to connect to " + conf.NetworkBroker.IP)
+		rlog.Info("Try to connect to " + s.conf.NetworkBroker.IP)
 		err := s.server.Iface.Initialize(confServer)
 		if err == nil {
-			rlog.Info(clientID + " connected to server broker " + conf.NetworkBroker.IP)
+			rlog.Info(s.clientID + " connected to server broker " + s.conf.NetworkBroker.IP)
 			return err
 		}
 		timer := time.NewTicker(time.Second)
-		rlog.Error("Cannot connect to broker " + conf.NetworkBroker.IP + " error: " + err.Error())
-		rlog.Error("Try to reconnect " + conf.NetworkBroker.IP + " in 1s")
+		rlog.Error("Cannot connect to broker " + s.conf.NetworkBroker.IP + " error: " + err.Error())
+		rlog.Error("Try to reconnect " + s.conf.NetworkBroker.IP + " in 1s")
 
 		select {
 		case <-timer.C:

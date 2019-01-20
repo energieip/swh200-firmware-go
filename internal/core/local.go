@@ -5,7 +5,6 @@ import (
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
 	genericNetwork "github.com/energieip/common-components-go/pkg/network"
-	pkg "github.com/energieip/common-components-go/pkg/service"
 	"github.com/romana/rlog"
 )
 
@@ -27,7 +26,7 @@ func (s *Service) createLocalNetwork() error {
 
 }
 
-func (s *Service) localConnection(conf pkg.ServiceConfig, clientID string) error {
+func (s *Service) localConnection() error {
 	cbkLocal := make(map[string]func(genericNetwork.Client, genericNetwork.Message))
 	cbkLocal["/read/led/+/"+dl.UrlHello] = s.onLedHello
 	cbkLocal["/read/led/+/"+dl.UrlStatus] = s.onLedStatus
@@ -35,17 +34,19 @@ func (s *Service) localConnection(conf pkg.ServiceConfig, clientID string) error
 	cbkLocal["/read/sensor/+/"+ds.UrlStatus] = s.onSensorStatus
 	cbkLocal["/read/blind/+/"+dblind.UrlHello] = s.onBlindHello
 	cbkLocal["/read/blind/+/"+dblind.UrlStatus] = s.onBlindStatus
+	cbkLocal["/read/group/+/events/sensor"] = s.onGroupSensorEvent
+	cbkLocal["/write/group/+/commands"] = s.onGroupCommand
 	cbkLocal["/write/switch/commands"] = s.onSwitchCmd
 	confLocal := genericNetwork.NetworkConfig{
-		IP:               conf.LocalBroker.IP,
-		Port:             conf.LocalBroker.Port,
-		ClientName:       clientID,
+		IP:               s.conf.LocalBroker.IP,
+		Port:             s.conf.LocalBroker.Port,
+		ClientName:       s.clientID,
 		Callbacks:        cbkLocal,
-		LogLevel:         conf.LogLevel,
-		User:             conf.LocalBroker.Login,
-		Password:         conf.LocalBroker.Password,
-		ClientKey:        conf.LocalBroker.KeyPath,
-		ServerCertificat: conf.LocalBroker.CaPath,
+		LogLevel:         s.conf.LogLevel,
+		User:             s.conf.LocalBroker.Login,
+		Password:         s.conf.LocalBroker.Password,
+		ClientKey:        s.conf.LocalBroker.KeyPath,
+		ServerCertificat: s.conf.LocalBroker.CaPath,
 	}
 	return s.local.Iface.Initialize(confLocal)
 }
