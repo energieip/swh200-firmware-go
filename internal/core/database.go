@@ -6,6 +6,7 @@ import (
 	gm "github.com/energieip/common-components-go/pkg/dgroup"
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
+	sd "github.com/energieip/common-components-go/pkg/dswitch"
 	pkg "github.com/energieip/common-components-go/pkg/service"
 	"github.com/romana/rlog"
 )
@@ -238,11 +239,11 @@ func (s *Service) updateGroupStatus(status gm.GroupStatus) error {
 	return err
 }
 
-func (s *Service) updateClusterConfig(cluster map[string]pkg.Broker) error {
+func (s *Service) updateClusterConfig(cluster map[string]sd.SwitchCluster) error {
 	var res error
 	for name, elt := range cluster {
 		criteria := make(map[string]interface{})
-		criteria["Name"] = name
+		criteria["Mac"] = name
 		var err error
 		dbID := s.getObjectID(dl.DbConfig, TableCluster, criteria)
 		if dbID == "" {

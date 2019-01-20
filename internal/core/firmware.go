@@ -252,7 +252,6 @@ func (s *Service) cronDump() {
 	for {
 		select {
 		case <-timerDump.C:
-			// s.events <- ActionDump
 			if s.isConfigured {
 				s.sendDump()
 			} else {
@@ -312,6 +311,10 @@ func (s *Service) Run() error {
 							for _, group := range s.groups {
 								s.deleteGroup(group.Runtime)
 							}
+							s.leds = make(map[string]dl.Led)
+							s.sensors = make(map[string]ds.Sensor)
+							s.blinds = make(map[string]dblind.Blind)
+							s.groups = make(map[int]Group)
 							s.resetDB()
 						}
 					}
