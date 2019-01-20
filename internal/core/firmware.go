@@ -24,7 +24,7 @@ const (
 	UrlStatus = "status/dump"
 	UrlHello  = "setup/hello"
 
-	DefaultTimerDump = 10
+	DefaultTimerDump = 10000
 )
 
 //Service content
@@ -195,6 +195,7 @@ func (s *Service) sendDump() {
 }
 
 func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
+	s.timerDump = time.Duration(switchConfig.DumpFrequency)
 	for _, led := range switchConfig.LedsSetup {
 		s.prepareLedSetup(led)
 	}
@@ -256,7 +257,7 @@ func (s *Service) removeConfiguration(switchConfig sd.SwitchConfig) {
 }
 
 func (s *Service) cronDump() {
-	timerDump := time.NewTicker(s.timerDump * time.Second)
+	timerDump := time.NewTicker(s.timerDump * time.Millisecond)
 	for {
 		select {
 		case <-timerDump.C:
