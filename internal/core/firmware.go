@@ -283,10 +283,17 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 		s.reloadGroupConfig(grID, group)
 	}
 
-	rlog.Info("++++++++ update cluster ", switchConfig.ClusterBroker)
 	if len(switchConfig.ClusterBroker) > 0 {
-		rlog.Info("== update cluster ", switchConfig.ClusterBroker)
 		s.updateClusterConfig(switchConfig.ClusterBroker)
+		for _, cl := range switchConfig.ClusterBroker {
+			client, err := s.createClusterNetwork()
+			if err != nil {
+				rlog.Warn("Cannot create a connection to", cl.Mac, err.Error())
+				continue
+			}
+			s.cluster[cl.Mac] = client
+			go s.remoteClusterConnection(cl.IP, client)
+		}
 	}
 }
 
