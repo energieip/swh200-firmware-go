@@ -176,6 +176,12 @@ func (s *Service) sendDump() {
 		services[component.Name] = component
 	}
 
+	clusters := make(map[string]sd.SwitchCluster)
+	for _, cl := range s.getClusterConfig() {
+		clusters[cl.Mac] = cl
+	}
+	status.ClusterBroker = clusters
+
 	status.Services = services
 	timeNow := time.Now().UTC()
 	leds := s.getStatusLeds()
