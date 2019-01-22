@@ -308,6 +308,10 @@ func (s *Service) removeConfiguration(switchConfig sd.SwitchConfig) {
 	for blindMac := range switchConfig.BlindsConfig {
 		s.removeBlind(blindMac)
 	}
+
+	for mac := range switchConfig.ClusterBroker {
+		s.removeClusterMember(mac)
+	}
 }
 
 func (s *Service) cronDump() {

@@ -274,3 +274,9 @@ func (s *Service) getClusterConfig() []sd.SwitchCluster {
 	}
 	return cluster
 }
+
+func (s *Service) removeClusterConfig(cluster string) error {
+	criteria := make(map[string]interface{})
+	criteria["Mac"] = cluster
+	return s.db.DeleteRecord(dl.DbConfig, TableCluster, criteria)
+}

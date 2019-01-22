@@ -109,8 +109,6 @@ func (s *Service) updateLedConfig(led dl.LedConf) {
 	_, ok := s.leds[led.Mac]
 	if ok {
 		s.sendLedUpdate(led)
-	} else {
-		rlog.Info("=== led not seen")
 	}
 }
 

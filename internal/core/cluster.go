@@ -79,5 +79,6 @@ func (s *Service) removeClusterMember(mac string) error {
 	}
 	val.Iface.Disconnect()
 	delete(s.cluster, mac)
+	s.removeClusterConfig(mac)
 	return nil
 }
