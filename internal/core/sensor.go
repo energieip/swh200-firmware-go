@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"strconv"
+	"time"
 
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
 	"github.com/energieip/common-components-go/pkg/network"
@@ -131,9 +132,12 @@ func (s *Service) onSensorHello(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
-
+	s.driversSeen[sensor.Mac] = time.Now().UTC()
 	sensor.IsConfigured = false
 	sensor.SwitchMac = s.mac
+	if sensor.DumpFrequency == 0 {
+		sensor.DumpFrequency = 1000 //ms default value for hello
+	}
 	err = s.updateSensorStatus(sensor)
 	if err != nil {
 		rlog.Error("Error during database update ", err.Error())
@@ -155,6 +159,7 @@ func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
+	s.driversSeen[sensor.Mac] = time.Now().UTC()
 	sensor.SwitchMac = s.mac
 	err = s.updateSensorStatus(sensor)
 	if err != nil {

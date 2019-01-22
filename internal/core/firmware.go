@@ -47,6 +47,7 @@ type Service struct {
 	blinds                map[string]dblind.Blind
 	conf                  pkg.ServiceConfig
 	clientID              string
+	driversSeen           map[string]time.Time
 }
 
 //Initialize service
@@ -59,6 +60,7 @@ func (s *Service) Initialize(confFile string) error {
 	s.blinds = make(map[string]dblind.Blind)
 	s.groups = make(map[int]Group)
 	s.cluster = make(map[string]ClusterNetwork)
+	s.driversSeen = make(map[string]time.Time)
 
 	conf, err := pkg.ReadServiceConfig(confFile)
 	if err != nil {
@@ -175,9 +177,61 @@ func (s *Service) sendDump() {
 	}
 
 	status.Services = services
-	status.Leds = s.getStatusLeds()
-	status.Sensors = s.getStatusSensors()
-	status.Blinds = s.getStatusBlinds()
+	timeNow := time.Now().UTC()
+	leds := s.getStatusLeds()
+	sensors := s.getStatusSensors()
+	blinds := s.getStatusBlinds()
+
+	dumpSensors := make(map[string]ds.Sensor)
+	dumpLeds := make(map[string]dl.Led)
+	dumpBlinds := make(map[string]dblind.Blind)
+	for _, driver := range leds {
+		val, ok := s.driversSeen[driver.Mac]
+		if ok {
+			maxDuration := time.Duration(2*driver.DumpFrequency) * time.Millisecond
+			if timeNow.Sub(val) <= maxDuration {
+				dumpLeds[driver.Mac] = driver
+				continue
+			} else {
+				delete(s.leds, driver.Mac)
+				delete(s.driversSeen, driver.Mac)
+				//TODO clear in database
+			}
+		}
+	}
+	status.Leds = dumpLeds
+
+	for _, driver := range sensors {
+		val, ok := s.driversSeen[driver.Mac]
+		if ok {
+			maxDuration := time.Duration(2*driver.DumpFrequency) * time.Millisecond
+			if timeNow.Sub(val) <= maxDuration {
+				dumpSensors[driver.Mac] = driver
+				continue
+			} else {
+				delete(s.sensors, driver.Mac)
+				delete(s.driversSeen, driver.Mac)
+				//TODO clear in database
+			}
+		}
+	}
+	status.Sensors = dumpSensors
+
+	for _, driver := range blinds {
+		val, ok := s.driversSeen[driver.Mac]
+		if ok {
+			maxDuration := time.Duration(2*driver.DumpFrequency) * time.Millisecond
+			if timeNow.Sub(val) <= maxDuration {
+				dumpBlinds[driver.Mac] = driver
+				continue
+			} else {
+				delete(s.blinds, driver.Mac)
+				delete(s.driversSeen, driver.Mac)
+				//TODO clear in database
+			}
+		}
+	}
+	status.Blinds = dumpBlinds
 	status.Groups = s.getStatusGroup()
 
 	dump, err := status.ToJSON()
@@ -191,7 +245,7 @@ func (s *Service) sendDump() {
 		rlog.Errorf("Could not dump switch %v status %v", s.mac, err.Error())
 		return
 	}
-	rlog.Infof("Status %v sent to the server", s.mac)
+	rlog.Infof("Status %v sent to the server", s.mac, dump)
 }
 
 func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {

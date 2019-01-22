@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"time"
 
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	"github.com/energieip/common-components-go/pkg/network"
@@ -121,9 +122,12 @@ func (s *Service) onLedHello(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
-
+	s.driversSeen[led.Mac] = time.Now().UTC()
 	led.IsConfigured = false
 	led.SwitchMac = s.mac
+	if led.DumpFrequency == 0 {
+		led.DumpFrequency = 1000 //ms default value for hello
+	}
 	err = s.updateLedStatus(led)
 	if err != nil {
 		rlog.Error("Error during database update ", err.Error())
@@ -146,6 +150,7 @@ func (s *Service) onLedStatus(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
+	s.driversSeen[led.Mac] = time.Now().UTC()
 	led.SwitchMac = s.mac
 	err = s.updateLedStatus(led)
 	if err != nil {

@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"time"
 
 	"github.com/energieip/common-components-go/pkg/dblind"
 	"github.com/energieip/common-components-go/pkg/network"
@@ -126,6 +127,10 @@ func (s *Service) onBlindHello(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
+	s.driversSeen[driver.Mac] = time.Now().UTC()
+	if driver.DumpFrequency == 0 {
+		driver.DumpFrequency = 1000 //ms default value for hello
+	}
 
 	driver.IsConfigured = false
 	driver.SwitchMac = s.mac
@@ -151,6 +156,7 @@ func (s *Service) onBlindStatus(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
+	s.driversSeen[driver.Mac] = time.Now().UTC()
 	driver.SwitchMac = s.mac
 	err = s.updateBlindStatus(driver)
 	if err != nil {
