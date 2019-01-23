@@ -395,6 +395,9 @@ func (s *Service) Run() error {
 							s.sensors = make(map[string]ds.Sensor)
 							s.blinds = make(map[string]dblind.Blind)
 							s.groups = make(map[int]Group)
+							for mac := range s.cluster {
+								s.removeClusterMember(mac)
+							}
 							s.resetDB()
 						}
 					}
