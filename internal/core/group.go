@@ -74,23 +74,24 @@ func (s *Service) dumpGroupStatus(group Group) error {
 	if group.Runtime.Auto != nil {
 		auto = *group.Runtime.Auto
 	}
-	slopeStart := 0
-	slopeStop := 0
-	if auto {
-		if group.Runtime.SlopeStartAuto != nil {
-			slopeStart = *group.Runtime.SlopeStartAuto
-		}
-		if group.Runtime.SlopeStopAuto != nil {
-			slopeStop = *group.Runtime.SlopeStopAuto
-		}
-	} else {
-		if group.Runtime.SlopeStartManual != nil {
-			slopeStart = *group.Runtime.SlopeStartManual
-		}
-		if group.Runtime.SlopeStopManual != nil {
-			slopeStop = *group.Runtime.SlopeStopManual
-		}
+	slopeStartManual := 0
+	slopeStopManual := 0
+	slopeStartAuto := 0
+	slopeStopAuto := 0
+
+	if group.Runtime.SlopeStartAuto != nil {
+		slopeStartAuto = *group.Runtime.SlopeStartAuto
 	}
+	if group.Runtime.SlopeStopAuto != nil {
+		slopeStopAuto = *group.Runtime.SlopeStopAuto
+	}
+	if group.Runtime.SlopeStartManual != nil {
+		slopeStartManual = *group.Runtime.SlopeStartManual
+	}
+	if group.Runtime.SlopeStopManual != nil {
+		slopeStopManual = *group.Runtime.SlopeStopManual
+	}
+
 	sensorRule := gm.SensorAverage
 	if group.Runtime.SensorRule != nil {
 		sensorRule = *group.Runtime.SensorRule
@@ -109,8 +110,10 @@ func (s *Service) dumpGroupStatus(group Group) error {
 		TimeToLeave:        group.PresenceTimeout,
 		CorrectionInterval: correctionInterval,
 		SetpointLeds:       group.Setpoint,
-		SlopeStart:         slopeStart,
-		SlopeStop:          slopeStop,
+		SlopeStartAuto:     slopeStartAuto,
+		SlopeStartManual:   slopeStartManual,
+		SlopeStopAuto:      slopeStopAuto,
+		SlopeStopManual:    slopeStopManual,
 		Leds:               group.Runtime.Leds,
 		Sensors:            group.Runtime.Sensors,
 		RuleBrightness:     group.Runtime.RuleBrightness,
@@ -254,9 +257,18 @@ func (s *Service) setpointLed(group *Group) {
 		group.Setpoint = 100
 	}
 	rlog.Info("Set brightness now to " + strconv.Itoa(group.Setpoint))
+	var slopeStart int
+	var slopeStop int
+	if group.Runtime.Auto != nil && *group.Runtime.Auto == true {
+		slopeStart = *group.Runtime.SlopeStartAuto
+		slopeStop = *group.Runtime.SlopeStopAuto
+	} else {
+		slopeStart = *group.Runtime.SlopeStartManual
+		slopeStop = *group.Runtime.SlopeStopManual
+	}
 
 	for _, led := range group.Runtime.Leds {
-		s.sendLedGroupSetpoint(led, group.Setpoint)
+		s.sendLedGroupSetpoint(led, group.Setpoint, slopeStart, slopeStop)
 	}
 }
 
