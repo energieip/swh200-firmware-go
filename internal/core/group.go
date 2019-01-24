@@ -297,6 +297,9 @@ func (s *Service) createGroup(runtime gm.GroupConfig) {
 		Scale:   10,
 		Sensors: make(map[string]SensorEvent),
 	}
+	for _, sensor := range runtime.Sensors {
+		group.Sensors[sensor] = SensorEvent{}
+	}
 	s.groups[runtime.Group] = group
 	s.groupRun(&group)
 }
