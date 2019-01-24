@@ -153,14 +153,21 @@ func (s *Service) groupRun(group *Group) error {
 				}
 			case <-ticker.C:
 				counter++
-				// compute timetoAuto and switch back to Auto mode
-				if group.TimeToAuto <= 0 && (group.Runtime.Auto == nil || *group.Runtime.Auto == false) {
-					auto := true
+
+				if len(group.Sensors) > 0 {
+					// compute timetoAuto and switch back to Auto mode
+					if group.TimeToAuto <= 0 && (group.Runtime.Auto == nil || *group.Runtime.Auto == false) {
+						auto := true
+						group.Runtime.Auto = &auto
+						rlog.Info("Switch group " + strconv.Itoa(group.Runtime.Group) + " back to Automatic mode")
+					}
+					if group.TimeToAuto > 0 {
+						group.TimeToAuto--
+					}
+				} else {
+					//When no sensor are presents the group stay in manual mode forever
+					auto := false
 					group.Runtime.Auto = &auto
-					rlog.Info("Switch group " + strconv.Itoa(group.Runtime.Group) + " back to Automatic mode")
-				}
-				if group.TimeToAuto > 0 {
-					group.TimeToAuto--
 				}
 
 				if group.Runtime.CorrectionInterval == nil || counter == *group.Runtime.CorrectionInterval {
@@ -200,6 +207,7 @@ func (s *Service) computeSensorsValues(group *Group) {
 	refMac := ""
 	for mac := range group.Sensors {
 		refMac = mac
+		break
 	}
 	if refMac == "" {
 		//No sensors in this group
