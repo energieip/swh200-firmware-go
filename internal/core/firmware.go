@@ -24,7 +24,7 @@ const (
 	UrlStatus = "status/dump"
 	UrlHello  = "setup/hello"
 
-	DefaultTimerDump = 10000
+	DefaultTimerDump = 1000
 )
 
 //Service content
