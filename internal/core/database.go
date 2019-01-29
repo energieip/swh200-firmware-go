@@ -239,6 +239,35 @@ func (s *Service) updateGroupStatus(status gm.GroupStatus) error {
 	return err
 }
 
+func (s *Service) updateGroupConfig(cfg gm.GroupConfig) error {
+	var err error
+	criteria := make(map[string]interface{})
+	criteria["Group"] = cfg.Group
+	dbID := s.getObjectID(dl.DbConfig, gm.TableStatusName, criteria)
+	if dbID == "" {
+		_, err = s.db.InsertRecord(dl.DbConfig, gm.TableStatusName, cfg)
+	} else {
+		err = s.db.UpdateRecord(dl.DbConfig, gm.TableStatusName, dbID, cfg)
+	}
+	return err
+}
+
+func (s *Service) getGroupsConfig() map[int]gm.GroupConfig {
+	groups := make(map[int]gm.GroupConfig)
+	stored, err := s.db.FetchAllRecords(dl.DbConfig, gm.TableStatusName)
+	if err != nil || stored == nil {
+		return groups
+	}
+	for _, v := range stored {
+		gr, err := gm.ToGroupConfig(v)
+		if err != nil || gr == nil {
+			continue
+		}
+		groups[gr.Group] = *gr
+	}
+	return groups
+}
+
 func (s *Service) updateClusterConfig(cluster map[string]sd.SwitchCluster) error {
 	var res error
 	for name, elt := range cluster {

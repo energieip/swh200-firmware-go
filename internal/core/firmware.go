@@ -88,6 +88,15 @@ func (s *Service) Initialize(confFile string) error {
 		return err
 	}
 
+	groups := s.getGroupsConfig()
+	for grID, group := range groups {
+		if _, ok := s.groups[grID]; !ok {
+			s.createGroup(group)
+			continue
+		}
+		s.reloadGroupConfig(grID, group)
+	}
+
 	err = s.createServerNetwork()
 	if err != nil {
 		rlog.Error("Cannot connect to broker " + conf.LocalBroker.IP + " error: " + err.Error())
@@ -279,6 +288,7 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 	}
 
 	for grID, group := range switchConfig.Groups {
+		s.updateGroupConfig(group)
 		if _, ok := s.groups[grID]; !ok {
 			rlog.Info("Group " + strconv.Itoa(grID) + " create it")
 			s.createGroup(group)
