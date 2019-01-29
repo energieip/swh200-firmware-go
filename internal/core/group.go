@@ -171,10 +171,10 @@ func (s *Service) groupRun(group *Group) error {
 					auto := false
 					group.Runtime.Auto = &auto
 				}
+				s.computeSensorsValues(group)
 
 				if group.Runtime.CorrectionInterval == nil || counter == *group.Runtime.CorrectionInterval {
 					if group.Runtime.Auto != nil && *group.Runtime.Auto == true {
-						s.computeSensorsValues(group)
 						if group.Presence {
 							if group.Runtime.RuleBrightness != nil {
 								readBrightness := *group.Runtime.RuleBrightness
@@ -256,7 +256,6 @@ func (s *Service) computeSensorsValues(group *Group) {
 	} else {
 		group.Presence = true
 	}
-
 }
 
 func (s *Service) setpointLed(group *Group) {
@@ -266,7 +265,7 @@ func (s *Service) setpointLed(group *Group) {
 	if group.Setpoint > 100 {
 		group.Setpoint = 100
 	}
-	rlog.Info("Set brightness now to " + strconv.Itoa(group.Setpoint))
+	rlog.Info("Set leds now to " + strconv.Itoa(group.Setpoint))
 	var slopeStart int
 	var slopeStop int
 	if group.Runtime.Auto != nil && *group.Runtime.Auto == true {
