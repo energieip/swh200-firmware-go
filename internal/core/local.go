@@ -28,6 +28,7 @@ func (s *Service) createLocalNetwork() error {
 
 func (s *Service) localConnection() error {
 	cbkLocal := make(map[string]func(genericNetwork.Client, genericNetwork.Message))
+	cbkLocal["/write/switch/commands"] = s.onSwitchCmd
 	cbkLocal["/read/led/+/"+dl.UrlHello] = s.onLedHello
 	cbkLocal["/read/led/+/"+dl.UrlStatus] = s.onLedStatus
 	cbkLocal["/read/sensor/+/"+ds.UrlHello] = s.onSensorHello
@@ -36,7 +37,7 @@ func (s *Service) localConnection() error {
 	cbkLocal["/read/blind/+/"+dblind.UrlStatus] = s.onBlindStatus
 	cbkLocal["/read/group/+/events/sensor"] = s.onGroupSensorEvent
 	cbkLocal["/write/group/+/commands"] = s.onGroupCommand
-	cbkLocal["/write/switch/commands"] = s.onSwitchCmd
+
 	confLocal := genericNetwork.NetworkConfig{
 		IP:               s.conf.LocalBroker.IP,
 		Port:             s.conf.LocalBroker.Port,

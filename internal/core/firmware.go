@@ -72,7 +72,6 @@ func (s *Service) Initialize(confFile string) error {
 	mac, ip := tools.GetNetworkInfo()
 	s.ip = ip
 	s.mac = strings.ToUpper(mac[9:])
-	s.groups = make(map[int]Group, 0)
 	s.services = make(map[string]pkg.Service)
 
 	os.Setenv("RLOG_LOG_LEVEL", conf.LogLevel)

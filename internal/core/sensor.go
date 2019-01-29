@@ -96,9 +96,10 @@ func (s *Service) prepareSensorSetup(sensor ds.SensorSetup) {
 	if err != nil {
 		rlog.Error("Cannot update database", err.Error())
 	}
-	_, ok := s.sensors[sensor.Mac]
-	if ok {
-		s.sendSensorSetup(sensor)
+	cell, ok := s.sensors[sensor.Mac]
+	if ok && !cell.IsConfigured {
+		//uncomment this is due to an issue on sensor side
+		// s.sendSensorSetup(sensor)
 	}
 }
 
@@ -152,7 +153,7 @@ func (s *Service) onSensorHello(client network.Client, msg network.Message) {
 
 func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 	topic := msg.Topic()
-	rlog.Debug("Sensor service status: Received topic: " + topic + " payload: " + string(msg.Payload()))
+	rlog.Info("Sensor service status: Received topic: " + topic + " payload: " + string(msg.Payload()))
 	var sensor ds.Sensor
 	err := json.Unmarshal(msg.Payload(), &sensor)
 	if err != nil {

@@ -26,7 +26,7 @@ func (s *Service) onSwitchCmd(client network.Client, msg network.Message) {
 		return
 	}
 
-	url := "/read/group/" + strconv.Itoa(cmd.Group) + "/commands"
+	url := "/write/group/" + strconv.Itoa(cmd.Group) + "/commands"
 
 	err = s.clusterSendCommand(url, payloadStr)
 	if err != nil {
