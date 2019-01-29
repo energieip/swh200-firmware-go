@@ -162,6 +162,9 @@ func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 	}
 	s.driversSeen[sensor.Mac] = time.Now().UTC()
 	sensor.SwitchMac = s.mac
+	// apply brightness correction Factor
+	sensor.Brightness = sensor.BrightnessRaw / sensor.BrightnessCorrectionFactor
+
 	err = s.updateSensorStatus(sensor)
 	if err != nil {
 		rlog.Error("Error during database update ", err.Error())
