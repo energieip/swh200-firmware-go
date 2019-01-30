@@ -4,6 +4,7 @@ import (
 	"time"
 
 	genericNetwork "github.com/energieip/common-components-go/pkg/network"
+	"github.com/energieip/swh200-firmware-go/internal/database"
 	"github.com/romana/rlog"
 )
 
@@ -79,6 +80,6 @@ func (s *Service) removeClusterMember(mac string) error {
 	}
 	val.Iface.Disconnect()
 	delete(s.cluster, mac)
-	s.removeClusterConfig(mac)
+	database.RemoveClusterConfig(s.db, mac)
 	return nil
 }

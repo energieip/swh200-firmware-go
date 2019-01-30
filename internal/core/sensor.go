@@ -7,6 +7,7 @@ import (
 
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
 	"github.com/energieip/common-components-go/pkg/network"
+	"github.com/energieip/swh200-firmware-go/internal/database"
 	"github.com/romana/rlog"
 )
 
@@ -70,7 +71,7 @@ func (s *Service) updateSensorStatus(sensor ds.Sensor) error {
 	var err error
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = sensor.Mac
-	dbID := s.getObjectID(ds.DbStatus, ds.TableName, criteria)
+	dbID := database.GetObjectID(s.db, ds.DbStatus, ds.TableName, criteria)
 	if dbID == "" {
 		_, err = s.db.InsertRecord(ds.DbStatus, ds.TableName, sensor)
 	} else {
@@ -86,7 +87,7 @@ func (s *Service) prepareSensorSetup(sensor ds.SensorSetup) {
 	var err error
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = sensor.Mac
-	dbID := s.getObjectID(ds.DbConfig, ds.TableName, criteria)
+	dbID := database.GetObjectID(s.db, ds.DbConfig, ds.TableName, criteria)
 
 	if dbID == "" {
 		_, err = s.db.InsertRecord(ds.DbConfig, ds.TableName, sensor)
@@ -145,7 +146,7 @@ func (s *Service) onSensorHello(client network.Client, msg network.Message) {
 		return
 	}
 	rlog.Debug("New Sensor driver stored on database :" + sensor.Mac)
-	cfg := s.getConfigSensor(sensor.Mac)
+	cfg := database.GetConfigSensor(s.db, sensor.Mac)
 	if cfg != nil {
 		s.sendSensorSetup(*cfg)
 	}

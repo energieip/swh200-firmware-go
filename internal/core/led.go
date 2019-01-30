@@ -6,6 +6,7 @@ import (
 
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	"github.com/energieip/common-components-go/pkg/network"
+	"github.com/energieip/swh200-firmware-go/internal/database"
 	"github.com/romana/rlog"
 )
 
@@ -75,7 +76,7 @@ func (s *Service) updateLedStatus(led dl.Led) error {
 	// Check if the serial already exist in database (case restart process)
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = led.Mac
-	dbID := s.getObjectID(dl.DbStatus, dl.TableName, criteria)
+	dbID := database.GetObjectID(s.db, dl.DbStatus, dl.TableName, criteria)
 	if dbID == "" {
 		_, err = s.db.InsertRecord(dl.DbStatus, dl.TableName, led)
 	} else {
@@ -91,7 +92,7 @@ func (s *Service) prepareLedSetup(led dl.LedSetup) {
 	var err error
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = led.Mac
-	dbID := s.getObjectID(dl.DbConfig, dl.TableName, criteria)
+	dbID := database.GetObjectID(s.db, dl.DbConfig, dl.TableName, criteria)
 
 	if dbID == "" {
 		_, err = s.db.InsertRecord(dl.DbConfig, dl.TableName, led)
@@ -135,7 +136,7 @@ func (s *Service) onLedHello(client network.Client, msg network.Message) {
 	}
 	rlog.Debugf("New LED driver %v stored on database ", led.Mac)
 
-	cfg := s.getConfigLed(led.Mac)
+	cfg := database.GetConfigLed(s.db, led.Mac)
 	if cfg != nil {
 		s.sendLedSetup(*cfg)
 	}

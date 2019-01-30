@@ -1,4 +1,4 @@
-package core
+package database
 
 import (
 	"github.com/energieip/common-components-go/pkg/database"
@@ -17,22 +17,22 @@ const (
 	TableCluster = "clusters"
 )
 
-func (s *Service) connectDatabase(ip, port string) error {
+//ConnectDatabase
+func ConnectDatabase(ip, port string) (Database, error) {
 	db, err := database.NewDatabase(database.RETHINKDB)
 	if err != nil {
 		rlog.Error("database err " + err.Error())
-		return err
+		return nil, err
 	}
-	s.db = db
 
 	confDb := database.DatabaseConfig{
 		IP:   ip,
 		Port: port,
 	}
-	err = s.db.Initialize(confDb)
+	err = db.Initialize(confDb)
 	if err != nil {
 		rlog.Error("Cannot connect to database " + err.Error())
-		return err
+		return nil, err
 	}
 
 	for _, dbName := range []string{dl.DbConfig, dl.DbStatus} {
@@ -62,13 +62,13 @@ func (s *Service) connectDatabase(ip, port string) error {
 		}
 	}
 
-	return nil
+	return db, nil
 }
 
-func (s *Service) resetDB() error {
+func ResetDB(db Database) error {
 	var res error
 	for _, dbName := range []string{dl.DbConfig, dl.DbStatus} {
-		err := s.db.CreateDB(dbName)
+		err := db.CreateDB(dbName)
 		if err != nil {
 			rlog.Warn("Create DB ", err.Error())
 			res = err
@@ -88,12 +88,12 @@ func (s *Service) resetDB() error {
 			tableCfg[dblind.TableName] = dblind.Blind{}
 		}
 		for tableName, objs := range tableCfg {
-			err = s.db.DropTable(dbName, tableName)
+			err = db.DropTable(dbName, tableName)
 			if err != nil {
 				rlog.Warn("Cannot drop table ", err.Error())
 				continue
 			}
-			err = s.db.CreateTable(dbName, tableName, &objs)
+			err = db.CreateTable(dbName, tableName, &objs)
 			if err != nil {
 				rlog.Warn("Create table ", err.Error())
 				res = err
@@ -103,12 +103,12 @@ func (s *Service) resetDB() error {
 	return res
 }
 
-func (s *Service) dbClose() error {
-	return s.db.Close()
+func DBClose(db Database) error {
+	return db.Close()
 }
 
-func (s *Service) getObjectID(dbName, tbName string, criteria map[string]interface{}) string {
-	stored, err := s.db.GetRecord(dbName, tbName, criteria)
+func GetObjectID(db Database, dbName, tbName string, criteria map[string]interface{}) string {
+	stored, err := db.GetRecord(dbName, tbName, criteria)
 	if err == nil && stored != nil {
 		m := stored.(map[string]interface{})
 		id, ok := m["id"]
@@ -119,9 +119,9 @@ func (s *Service) getObjectID(dbName, tbName string, criteria map[string]interfa
 	return ""
 }
 
-func (s *Service) getStatusLeds() map[string]dl.Led {
+func GetStatusLeds(db Database) map[string]dl.Led {
 	leds := make(map[string]dl.Led)
-	stored, err := s.db.FetchAllRecords(dl.DbStatus, dl.TableName)
+	stored, err := db.FetchAllRecords(dl.DbStatus, dl.TableName)
 	if err != nil || stored == nil {
 		return leds
 	}
@@ -135,9 +135,9 @@ func (s *Service) getStatusLeds() map[string]dl.Led {
 	return leds
 }
 
-func (s *Service) getStatusSensors() map[string]ds.Sensor {
+func GetStatusSensors(db Database) map[string]ds.Sensor {
 	sensors := make(map[string]ds.Sensor)
-	stored, err := s.db.FetchAllRecords(ds.DbStatus, ds.TableName)
+	stored, err := db.FetchAllRecords(ds.DbStatus, ds.TableName)
 	if err != nil || stored == nil {
 		return sensors
 	}
@@ -151,9 +151,9 @@ func (s *Service) getStatusSensors() map[string]ds.Sensor {
 	return sensors
 }
 
-func (s *Service) getStatusBlinds() map[string]dblind.Blind {
+func GetStatusBlinds(db Database) map[string]dblind.Blind {
 	drivers := make(map[string]dblind.Blind)
-	stored, err := s.db.FetchAllRecords(dblind.DbStatus, dblind.TableName)
+	stored, err := db.FetchAllRecords(dblind.DbStatus, dblind.TableName)
 	if err != nil || stored == nil {
 		return drivers
 	}
@@ -167,10 +167,10 @@ func (s *Service) getStatusBlinds() map[string]dblind.Blind {
 	return drivers
 }
 
-func (s *Service) getConfigLed(mac string) *dl.LedSetup {
+func GetConfigLed(db Database, mac string) *dl.LedSetup {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
-	stored, err := s.db.GetRecord(dl.DbConfig, dl.TableName, criteria)
+	stored, err := db.GetRecord(dl.DbConfig, dl.TableName, criteria)
 	if err != nil || stored == nil {
 		return nil
 	}
@@ -181,10 +181,10 @@ func (s *Service) getConfigLed(mac string) *dl.LedSetup {
 	return light
 }
 
-func (s *Service) getConfigBlind(mac string) *dblind.BlindSetup {
+func GetConfigBlind(db Database, mac string) *dblind.BlindSetup {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
-	stored, err := s.db.GetRecord(dblind.DbConfig, dblind.TableName, criteria)
+	stored, err := db.GetRecord(dblind.DbConfig, dblind.TableName, criteria)
 	if err != nil || stored == nil {
 		return nil
 	}
@@ -195,10 +195,10 @@ func (s *Service) getConfigBlind(mac string) *dblind.BlindSetup {
 	return driver
 }
 
-func (s *Service) getConfigSensor(mac string) *ds.SensorSetup {
+func GetConfigSensor(db Database, mac string) *ds.SensorSetup {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
-	stored, err := s.db.GetRecord(ds.DbConfig, ds.TableName, criteria)
+	stored, err := db.GetRecord(ds.DbConfig, ds.TableName, criteria)
 	if err != nil || stored == nil {
 		return nil
 	}
@@ -209,9 +209,9 @@ func (s *Service) getConfigSensor(mac string) *ds.SensorSetup {
 	return sensor
 }
 
-func (s *Service) getStatusGroup() map[int]gm.GroupStatus {
+func GetStatusGroup(db Database) map[int]gm.GroupStatus {
 	groups := make(map[int]gm.GroupStatus)
-	stored, err := s.db.FetchAllRecords(gm.DbStatusName, gm.TableStatusName)
+	stored, err := db.FetchAllRecords(gm.DbStatusName, gm.TableStatusName)
 	if err != nil || stored == nil {
 		return groups
 	}
@@ -226,35 +226,35 @@ func (s *Service) getStatusGroup() map[int]gm.GroupStatus {
 	return groups
 }
 
-func (s *Service) updateGroupStatus(status gm.GroupStatus) error {
+func UpdateGroupStatus(db Database, status gm.GroupStatus) error {
 	var err error
 	criteria := make(map[string]interface{})
 	criteria["Group"] = status.Group
-	dbID := s.getObjectID(gm.DbStatusName, gm.TableStatusName, criteria)
+	dbID := GetObjectID(db, gm.DbStatusName, gm.TableStatusName, criteria)
 	if dbID == "" {
-		_, err = s.db.InsertRecord(gm.DbStatusName, gm.TableStatusName, status)
+		_, err = db.InsertRecord(gm.DbStatusName, gm.TableStatusName, status)
 	} else {
-		err = s.db.UpdateRecord(gm.DbStatusName, gm.TableStatusName, dbID, status)
+		err = db.UpdateRecord(gm.DbStatusName, gm.TableStatusName, dbID, status)
 	}
 	return err
 }
 
-func (s *Service) updateGroupConfig(cfg gm.GroupConfig) error {
+func UpdateGroupConfig(db Database, cfg gm.GroupConfig) error {
 	var err error
 	criteria := make(map[string]interface{})
 	criteria["Group"] = cfg.Group
-	dbID := s.getObjectID(dl.DbConfig, gm.TableStatusName, criteria)
+	dbID := GetObjectID(db, dl.DbConfig, gm.TableStatusName, criteria)
 	if dbID == "" {
-		_, err = s.db.InsertRecord(dl.DbConfig, gm.TableStatusName, cfg)
+		_, err = db.InsertRecord(dl.DbConfig, gm.TableStatusName, cfg)
 	} else {
-		err = s.db.UpdateRecord(dl.DbConfig, gm.TableStatusName, dbID, cfg)
+		err = db.UpdateRecord(dl.DbConfig, gm.TableStatusName, dbID, cfg)
 	}
 	return err
 }
 
-func (s *Service) getGroupsConfig() map[int]gm.GroupConfig {
+func GetGroupsConfig(db Database) map[int]gm.GroupConfig {
 	groups := make(map[int]gm.GroupConfig)
-	stored, err := s.db.FetchAllRecords(dl.DbConfig, gm.TableStatusName)
+	stored, err := db.FetchAllRecords(dl.DbConfig, gm.TableStatusName)
 	if err != nil || stored == nil {
 		return groups
 	}
@@ -268,17 +268,17 @@ func (s *Service) getGroupsConfig() map[int]gm.GroupConfig {
 	return groups
 }
 
-func (s *Service) updateClusterConfig(cluster map[string]sd.SwitchCluster) error {
+func UpdateClusterConfig(db Database, cluster map[string]sd.SwitchCluster) error {
 	var res error
 	for name, elt := range cluster {
 		criteria := make(map[string]interface{})
 		criteria["Mac"] = name
 		var err error
-		dbID := s.getObjectID(dl.DbConfig, TableCluster, criteria)
+		dbID := GetObjectID(db, dl.DbConfig, TableCluster, criteria)
 		if dbID == "" {
-			_, err = s.db.InsertRecord(dl.DbConfig, TableCluster, elt)
+			_, err = db.InsertRecord(dl.DbConfig, TableCluster, elt)
 		} else {
-			err = s.db.UpdateRecord(dl.DbConfig, TableCluster, dbID, elt)
+			err = db.UpdateRecord(dl.DbConfig, TableCluster, dbID, elt)
 		}
 		if err != nil {
 			res = err
@@ -287,9 +287,9 @@ func (s *Service) updateClusterConfig(cluster map[string]sd.SwitchCluster) error
 	return res
 }
 
-func (s *Service) getClusterConfig() []sd.SwitchCluster {
+func GetClusterConfig(db Database) []sd.SwitchCluster {
 	var cluster []sd.SwitchCluster
-	stored, err := s.db.FetchAllRecords(dl.DbConfig, TableCluster)
+	stored, err := db.FetchAllRecords(dl.DbConfig, TableCluster)
 	if err != nil || stored == nil {
 		return cluster
 	}
@@ -304,8 +304,26 @@ func (s *Service) getClusterConfig() []sd.SwitchCluster {
 	return cluster
 }
 
-func (s *Service) removeClusterConfig(cluster string) error {
+func RemoveClusterConfig(db Database, cluster string) error {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = cluster
-	return s.db.DeleteRecord(dl.DbConfig, TableCluster, criteria)
+	return db.DeleteRecord(dl.DbConfig, TableCluster, criteria)
+}
+
+func RemoveLedStatus(db Database, mac string) error {
+	criteria := make(map[string]interface{})
+	criteria["Mac"] = mac
+	return db.DeleteRecord(dl.DbStatus, dl.TableName, criteria)
+}
+
+func RemoveSensorStatus(db Database, mac string) error {
+	criteria := make(map[string]interface{})
+	criteria["Mac"] = mac
+	return db.DeleteRecord(ds.DbStatus, ds.TableName, criteria)
+}
+
+func RemoveBlindStatus(db Database, mac string) error {
+	criteria := make(map[string]interface{})
+	criteria["Mac"] = mac
+	return db.DeleteRecord(dblind.DbStatus, dblind.TableName, criteria)
 }

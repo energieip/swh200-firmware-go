@@ -1,5 +1,5 @@
 hash: d411425b4f9db07589085d22323989d1ba481bfb0dd3cddbcc5288ab094b4b65
-updated: 2019-01-23T12:12:19.867067821+01:00
+updated: 2019-01-30T14:46:22.302655835+01:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 1e4cf3da559842a91afcb6ea6141451e6c30c618
@@ -26,6 +26,10 @@ imports:
   version: 347cf4a86c1cb8d262994d8ef5924d4576c5b331
   subpackages:
   - proto
+- name: github.com/gorilla/mux
+  version: a7962380ca08b5a188038c69871b8d3fbdf31e89
+- name: github.com/gorilla/websocket
+  version: 95ba29eb981bbb27d92e1f70bf8a1949452d926b
 - name: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - name: github.com/konsorten/go-windows-terminal-sequences
@@ -38,21 +42,21 @@ imports:
 - name: github.com/romana/rlog
   version: f018bc92e7d71f27c04e04cbf008860416c21d01
 - name: github.com/sirupsen/logrus
-  version: 7d8d63893b994a654b3bc8d16ffd7fb6b9f884a4
+  version: 4ea4861398d99a2d05be29675c5b74caf7bea95e
 - name: golang.org/x/crypto
-  version: 057139ce5d2bdbe6fe73c53679e24e9cf007f637
+  version: b01c7a72566457eb1420261cdafef86638fc3861
   subpackages:
   - pbkdf2
   - ssh/terminal
 - name: golang.org/x/net
-  version: ed066c81e75eba56dd9bd2139ade88125b855585
+  version: d26f9f9a57f3fab6a695bec0d84433c2c50f8bbf
   subpackages:
   - context
   - internal/socks
   - proxy
   - websocket
 - name: golang.org/x/sys
-  version: c6b37f3e92850b723493d63fd35aad34e19e048d
+  version: 302c3dd5f1cc82baae8e44d9c3178e89b6e2b345
   subpackages:
   - unix
   - windows

@@ -6,6 +6,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/energieip/swh200-firmware-go/internal/api"
+	"github.com/energieip/swh200-firmware-go/internal/database"
+
 	"github.com/energieip/common-components-go/pkg/dblind"
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
@@ -32,7 +35,7 @@ type Service struct {
 	server                ServerNetwork             //Remote server
 	local                 LocalNetwork              //local broker for drivers and services
 	cluster               map[string]ClusterNetwork //Share broker in the cluster
-	db                    Database
+	db                    database.Database
 	mac                   string //Switch mac address
 	events                chan string
 	timerDump             time.Duration //in seconds
@@ -48,6 +51,7 @@ type Service struct {
 	conf                  pkg.ServiceConfig
 	clientID              string
 	driversSeen           map[string]time.Time
+	api                   *api.API
 }
 
 //Initialize service
@@ -83,13 +87,14 @@ func (s *Service) Initialize(confFile string) error {
 	s.timerDump = DefaultTimerDump
 	s.friendlyName = s.mac
 
-	err = s.connectDatabase(conf.DB.ClientIP, conf.DB.ClientPort)
+	db, err := database.ConnectDatabase(conf.DB.ClientIP, conf.DB.ClientPort)
 	if err != nil {
 		rlog.Error("Cannot connect to database " + err.Error())
 		return err
 	}
+	s.db = db
 
-	groups := s.getGroupsConfig()
+	groups := database.GetGroupsConfig(s.db)
 	for grID, group := range groups {
 		if _, ok := s.groups[grID]; !ok {
 			s.createGroup(group)
@@ -116,7 +121,7 @@ func (s *Service) Initialize(confFile string) error {
 		return err
 	}
 
-	clusters := s.getClusterConfig()
+	clusters := database.GetClusterConfig(s.db)
 	for _, cl := range clusters {
 		client, err := s.createClusterNetwork()
 		if err != nil {
@@ -128,6 +133,8 @@ func (s *Service) Initialize(confFile string) error {
 	}
 
 	go s.remoteServerConnection()
+	web := api.InitAPI(s.db, *conf)
+	s.api = web
 	rlog.Info("SwitchCore service started")
 	return nil
 }
@@ -138,7 +145,7 @@ func (s *Service) Stop() {
 	s.localDisconnect()
 	s.serverDisconnect()
 	s.clusterDisconnect()
-	s.dbClose()
+	database.DBClose(s.db)
 	rlog.Info("SwitchCore service stopped")
 }
 
@@ -174,7 +181,6 @@ func (s *Service) sendDump() {
 	status.IsConfigured = &s.isConfigured
 	status.FriendlyName = s.friendlyName
 	services := make(map[string]pkg.ServiceStatus)
-	consumption := 0
 
 	for _, c := range s.services {
 		component := pkg.ServiceStatus{}
@@ -187,16 +193,16 @@ func (s *Service) sendDump() {
 	}
 
 	clusters := make(map[string]sd.SwitchCluster)
-	for _, cl := range s.getClusterConfig() {
+	for _, cl := range database.GetClusterConfig(s.db) {
 		clusters[cl.Mac] = cl
 	}
 	status.ClusterBroker = clusters
 
 	status.Services = services
 	timeNow := time.Now().UTC()
-	leds := s.getStatusLeds()
-	sensors := s.getStatusSensors()
-	blinds := s.getStatusBlinds()
+	leds := database.GetStatusLeds(s.db)
+	sensors := database.GetStatusSensors(s.db)
+	blinds := database.GetStatusBlinds(s.db)
 
 	dumpSensors := make(map[string]ds.Sensor)
 	dumpLeds := make(map[string]dl.Led)
@@ -207,12 +213,11 @@ func (s *Service) sendDump() {
 			maxDuration := time.Duration(2*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val) <= maxDuration {
 				dumpLeds[driver.Mac] = driver
-				consumption += driver.LinePower
 				continue
 			} else {
 				delete(s.leds, driver.Mac)
 				delete(s.driversSeen, driver.Mac)
-				//TODO clear in database
+				database.RemoveLedStatus(s.db, driver.Mac)
 			}
 		}
 	}
@@ -228,7 +233,7 @@ func (s *Service) sendDump() {
 			} else {
 				delete(s.sensors, driver.Mac)
 				delete(s.driversSeen, driver.Mac)
-				//TODO clear in database
+				database.RemoveSensorStatus(s.db, driver.Mac)
 			}
 		}
 	}
@@ -240,19 +245,16 @@ func (s *Service) sendDump() {
 			maxDuration := time.Duration(2*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val) <= maxDuration {
 				dumpBlinds[driver.Mac] = driver
-				consumption += driver.LinePower
 				continue
 			} else {
 				delete(s.blinds, driver.Mac)
 				delete(s.driversSeen, driver.Mac)
-				//TODO clear in database
+				database.RemoveBlindStatus(s.db, driver.Mac)
 			}
 		}
 	}
 	status.Blinds = dumpBlinds
-	status.Groups = s.getStatusGroup()
-
-	rlog.Info("=== consumption (in Watts) ", consumption)
+	status.Groups = database.GetStatusGroup(s.db)
 
 	dump, err := status.ToJSON()
 	if err != nil {
@@ -294,7 +296,7 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 	}
 
 	for grID, group := range switchConfig.Groups {
-		s.updateGroupConfig(group)
+		database.UpdateGroupConfig(s.db, group)
 		if _, ok := s.groups[grID]; !ok {
 			rlog.Info("Group " + strconv.Itoa(grID) + " create it")
 			s.createGroup(group)
@@ -305,7 +307,7 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 	}
 
 	if len(switchConfig.ClusterBroker) > 0 {
-		s.updateClusterConfig(switchConfig.ClusterBroker)
+		database.UpdateClusterConfig(s.db, switchConfig.ClusterBroker)
 		for _, cl := range switchConfig.ClusterBroker {
 			client, err := s.createClusterNetwork()
 			if err != nil {
@@ -413,7 +415,7 @@ func (s *Service) Run() error {
 							for mac := range s.cluster {
 								s.removeClusterMember(mac)
 							}
-							s.resetDB()
+							database.ResetDB(s.db)
 						}
 					}
 					if !s.isConfigured {

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/energieip/common-components-go/pkg/dblind"
+	"github.com/energieip/swh200-firmware-go/internal/database"
 
 	"github.com/energieip/common-components-go/pkg/dgroup"
 	gm "github.com/energieip/common-components-go/pkg/dgroup"
@@ -124,7 +125,7 @@ func (s *Service) dumpGroupStatus(group Group) error {
 		FriendlyName:       name,
 	}
 
-	return s.updateGroupStatus(status)
+	return database.UpdateGroupStatus(s.db, status)
 }
 
 func (s *Service) groupRun(group *Group) error {
@@ -175,6 +176,7 @@ func (s *Service) groupRun(group *Group) error {
 
 				if group.Runtime.CorrectionInterval == nil || counter == *group.Runtime.CorrectionInterval {
 					if group.Runtime.Auto != nil && *group.Runtime.Auto == true {
+						rlog.Info("Presence ", group.Presence)
 						if group.Presence {
 							if group.Runtime.RuleBrightness != nil {
 								readBrightness := *group.Runtime.RuleBrightness
@@ -269,11 +271,19 @@ func (s *Service) setpointLed(group *Group) {
 	var slopeStart int
 	var slopeStop int
 	if group.Runtime.Auto != nil && *group.Runtime.Auto == true {
-		slopeStart = *group.Runtime.SlopeStartAuto
-		slopeStop = *group.Runtime.SlopeStopAuto
+		if group.Runtime.SlopeStartAuto != nil {
+			slopeStart = *group.Runtime.SlopeStartAuto
+		}
+		if group.Runtime.SlopeStopAuto != nil {
+			slopeStop = *group.Runtime.SlopeStopAuto
+		}
 	} else {
-		slopeStart = *group.Runtime.SlopeStartManual
-		slopeStop = *group.Runtime.SlopeStopManual
+		if group.Runtime.SlopeStartManual != nil {
+			slopeStart = *group.Runtime.SlopeStartManual
+		}
+		if group.Runtime.SlopeStopManual != nil {
+			slopeStop = *group.Runtime.SlopeStopManual
+		}
 	}
 
 	for _, led := range group.Runtime.Leds {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/energieip/common-components-go/pkg/dblind"
 	"github.com/energieip/common-components-go/pkg/network"
+	"github.com/energieip/swh200-firmware-go/internal/database"
 	"github.com/romana/rlog"
 )
 
@@ -80,7 +81,7 @@ func (s *Service) updateBlindStatus(driver dblind.Blind) error {
 	// Check if the serial already exist in database (case restart process)
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = driver.Mac
-	dbID := s.getObjectID(dblind.DbStatus, dblind.TableName, criteria)
+	dbID := database.GetObjectID(s.db, dblind.DbStatus, dblind.TableName, criteria)
 	if dbID == "" {
 		_, err = s.db.InsertRecord(dblind.DbStatus, dblind.TableName, driver)
 	} else {
@@ -96,7 +97,7 @@ func (s *Service) prepareBlindSetup(driver dblind.BlindSetup) {
 	var err error
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = driver.Mac
-	dbID := s.getObjectID(dblind.DbConfig, dblind.TableName, criteria)
+	dbID := database.GetObjectID(s.db, dblind.DbConfig, dblind.TableName, criteria)
 
 	if dbID == "" {
 		_, err = s.db.InsertRecord(dblind.DbConfig, dblind.TableName, driver)
@@ -141,7 +142,7 @@ func (s *Service) onBlindHello(client network.Client, msg network.Message) {
 	}
 	rlog.Debugf("New Blind driver %v stored on database ", driver.Mac)
 
-	cfg := s.getConfigBlind(driver.Mac)
+	cfg := database.GetConfigBlind(s.db, driver.Mac)
 	if cfg != nil {
 		s.sendBlindSetup(*cfg)
 	}

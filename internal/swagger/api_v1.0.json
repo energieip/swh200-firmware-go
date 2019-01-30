@@ -1,0 +1,115 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "GTB switch API v1.0",
+        "version": "1.0",
+        "title": "Switch Swagger",
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "email": "developer@energie-ip.com"
+        },
+        "license": {
+            "name": "Apache 2.0",
+            "url": "http://www.apache.org/licenses/LICENSE-2.0.html"
+        }
+    },
+    "tags":[
+        {
+            "name": "status",
+            "description": "Switch status"
+        }
+    ],
+    "schemes":[
+        "https"
+    ],
+    "basePath": "/v1.0",
+    "paths":{
+        "/functions":{
+            "get":{
+                "summary": "Return the list of available API functions",
+                "description": "Return the list of available API functions",
+                "operationId": "getFunctions",
+                "produces":[
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "sucessful operation",
+                        "schema":{
+                            "type": "object",
+                            "properties": {
+                                "functions": {
+                                    "description": "list of available functions",
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "default": {
+                        "description": "unexpected error",
+                        "schema": {
+                          "$ref": "#/definitions/Error"
+                        }
+                    }
+                }
+            }
+        },
+        "/status/consumptions": {
+            "get": {
+                "tags": [
+                    "status"
+                ],
+                "summary": "Switch consumptions Status",
+                "description": "Switch consumptions Status",
+                "produces":[
+                    "application/json"
+                ],
+                "responses": {
+                    "200": {
+                        "description": "sucessful operation",
+                        "schema":{
+                            "$ref": "#/definitions/Consumption"
+                        }
+                    },
+                    "default": {
+                        "description": "unexpected error",
+                        "schema": {
+                          "$ref": "#/definitions/Error"
+                        }
+                      }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "Consumption" :{
+            "required": [
+                "power"
+            ],
+            "properties": {
+                "power": {
+                    "type": "integer",
+                    "format": "int32"
+                }
+            }
+        },
+        "Error": {
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "integer",
+                "format": "int32"
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+        }
+    }
+}
