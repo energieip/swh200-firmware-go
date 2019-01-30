@@ -13,25 +13,13 @@ import (
 func (s *Service) sendBlindSetup(driver dblind.BlindSetup) {
 	url := "/write/blind/" + driver.Mac + "/" + dblind.UrlSetup
 	dump, _ := driver.ToJSON()
-
-	err := s.localSendCommand(url, dump)
-	if err != nil {
-		rlog.Errorf("Cannot send new configuration for driver " + driver.Mac + " err: " + err.Error())
-	} else {
-		rlog.Info("New configuration has been sent to " + driver.Mac + " on topic: " + url + " dump: " + dump)
-	}
+	s.localSendCommand(url, dump)
 }
 
 func (s *Service) sendBlindUpdate(driver dblind.BlindConf) {
 	url := "/write/blind/" + driver.Mac + "/" + dblind.UrlSetting
 	dump, _ := driver.ToJSON()
-
-	err := s.localSendCommand(url, dump)
-	if err != nil {
-		rlog.Errorf("Cannot send new settings for driver " + driver.Mac + " err: " + err.Error())
-	} else {
-		rlog.Info("New settings has been sent to " + driver.Mac + " on topic: " + url + " dump: " + dump)
-	}
+	s.localSendCommand(url, dump)
 }
 
 func (s *Service) sendBlindGroupSetpoint(mac string, blind *int, slat *int) {

@@ -13,25 +13,13 @@ import (
 func (s *Service) sendLedSetup(led dl.LedSetup) {
 	url := "/write/led/" + led.Mac + "/" + dl.UrlSetup
 	dump, _ := led.ToJSON()
-
-	err := s.localSendCommand(url, dump)
-	if err != nil {
-		rlog.Errorf("Cannot send new configuration for driver " + led.Mac + " err: " + err.Error())
-	} else {
-		rlog.Info("New configuration has been sent to " + led.Mac + " on topic: " + url + " dump: " + dump)
-	}
+	s.localSendCommand(url, dump)
 }
 
 func (s *Service) sendLedUpdate(led dl.LedConf) {
 	url := "/write/led/" + led.Mac + "/" + dl.UrlSetting
 	dump, _ := led.ToJSON()
-
-	err := s.localSendCommand(url, dump)
-	if err != nil {
-		rlog.Errorf("Cannot send new settings for driver " + led.Mac + " err: " + err.Error())
-	} else {
-		rlog.Info("New settings has been sent to " + led.Mac + " on topic: " + url + " dump: " + dump)
-	}
+	s.localSendCommand(url, dump)
 }
 
 func (s *Service) sendLedGroupSetpoint(mac string, setpoint int, slopeStart int, slopeStop int) {

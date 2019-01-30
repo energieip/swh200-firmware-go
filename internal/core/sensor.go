@@ -41,25 +41,13 @@ func ToSensorEvent(val interface{}) (*SensorEvent, error) {
 func (s *Service) sendSensorSetup(sensor ds.SensorSetup) {
 	url := "/write/sensor/" + sensor.Mac + "/" + ds.UrlSetup
 	dump, _ := sensor.ToJSON()
-
-	err := s.localSendCommand(url, dump)
-	if err != nil {
-		rlog.Errorf("Cannot send new configuration for driver " + sensor.Mac + " err: " + err.Error())
-	} else {
-		rlog.Info("New configuration has been sent to " + sensor.Mac + " on topic: " + url + " dump: " + dump)
-	}
+	s.localSendCommand(url, dump)
 }
 
 func (s *Service) sendSensorUpdate(sensor ds.SensorConf) {
 	url := "/write/sensor/" + sensor.Mac + "/" + ds.UrlSetting
 	dump, _ := sensor.ToJSON()
-
-	err := s.localSendCommand(url, dump)
-	if err != nil {
-		rlog.Errorf("Cannot send new settings for driver " + sensor.Mac + " err: " + err.Error())
-	} else {
-		rlog.Info("New settings has been sent to " + sensor.Mac + " on topic: " + url + " dump: " + dump)
-	}
+	s.localSendCommand(url, dump)
 }
 
 func (s *Service) updateSensorStatus(sensor ds.Sensor) error {
@@ -187,10 +175,5 @@ func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 		rlog.Debug("sensor Event to Group has been sent to " + sensor.Mac + " on topic: " + url + " dump: " + dump)
 	}
 
-	err = s.localSendCommand(url, dump)
-	if err != nil {
-		rlog.Errorf("Cannot send sensor Event to Group on local broker" + sensor.Mac + " err: " + err.Error())
-	} else {
-		rlog.Debug("sensor Event to Group has been sent on local broker to " + sensor.Mac + " on topic: " + url + " dump: " + dump)
-	}
+	s.localSendCommand(url, dump)
 }

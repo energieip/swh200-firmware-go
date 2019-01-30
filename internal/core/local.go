@@ -59,9 +59,9 @@ func (s *Service) localDisconnect() {
 func (s *Service) localSendCommand(topic, content string) error {
 	err := s.local.Iface.SendCommand(topic, content)
 	if err != nil {
-		rlog.Error("Cannot send : " + content + "on: " + topic + " Error: " + err.Error())
+		rlog.Error("Cannot send : " + content + " on: " + topic + " Error: " + err.Error())
 	} else {
-		rlog.Info("Send : " + content + "on: " + topic)
+		rlog.Info("Send : " + content + " on: " + topic)
 	}
 	return err
 }
