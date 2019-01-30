@@ -115,7 +115,7 @@ func (s *Service) removeSensor(mac string) {
 }
 
 func (s *Service) onSensorHello(client network.Client, msg network.Message) {
-	rlog.Debug("Sensor service Hello: Received topic: " + msg.Topic() + " payload: " + string(msg.Payload()))
+	rlog.Debug(msg.Topic() + " : " + string(msg.Payload()))
 	var sensor ds.Sensor
 	err := json.Unmarshal(msg.Payload(), &sensor)
 	if err != nil {
@@ -141,8 +141,7 @@ func (s *Service) onSensorHello(client network.Client, msg network.Message) {
 }
 
 func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
-	topic := msg.Topic()
-	rlog.Info("Sensor service status: Received topic: " + topic + " payload: " + string(msg.Payload()))
+	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
 	var sensor ds.Sensor
 	err := json.Unmarshal(msg.Payload(), &sensor)
 	if err != nil {
@@ -168,12 +167,6 @@ func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 	}
 	dump, _ := evt.ToJSON()
 
-	err = s.clusterSendCommand(url, dump)
-	if err != nil {
-		rlog.Errorf("Cannot send sensor Event to Group " + sensor.Mac + " err: " + err.Error())
-	} else {
-		rlog.Debug("sensor Event to Group has been sent to " + sensor.Mac + " on topic: " + url + " dump: " + dump)
-	}
-
+	s.clusterSendCommand(url, dump)
 	s.localSendCommand(url, dump)
 }

@@ -18,7 +18,7 @@ type SwitchCmd struct {
 func (s *Service) onSwitchCmd(client network.Client, msg network.Message) {
 	payload := msg.Payload()
 	payloadStr := string(payload)
-	rlog.Info("Switch: Received topic: " + msg.Topic() + " payload: " + payloadStr)
+	rlog.Info(msg.Topic() + " : " + payloadStr)
 	var cmd SwitchCmd
 	err := json.Unmarshal(payload, &cmd)
 	if err != nil {
@@ -28,17 +28,6 @@ func (s *Service) onSwitchCmd(client network.Client, msg network.Message) {
 
 	url := "/write/group/" + strconv.Itoa(cmd.Group) + "/commands"
 
-	err = s.clusterSendCommand(url, payloadStr)
-	if err != nil {
-		rlog.Errorf("Cannot send command to Group " + strconv.Itoa(cmd.Group) + " err: " + err.Error())
-	} else {
-		rlog.Debug("Command to Group has been sent to " + strconv.Itoa(cmd.Group) + " on topic: " + url + " dump: " + payloadStr)
-	}
-
-	err = s.localSendCommand(url, payloadStr)
-	if err != nil {
-		rlog.Errorf("Cannot send command to Group on local broker" + strconv.Itoa(cmd.Group) + " err: " + err.Error())
-	} else {
-		rlog.Debug("sCommand to Group has been sent on local broker to " + strconv.Itoa(cmd.Group) + " on topic: " + url + " dump: " + payloadStr)
-	}
+	s.clusterSendCommand(url, payloadStr)
+	s.localSendCommand(url, payloadStr)
 }

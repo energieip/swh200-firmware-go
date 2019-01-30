@@ -215,6 +215,7 @@ func (s *Service) sendDump() {
 				dumpLeds[driver.Mac] = driver
 				continue
 			} else {
+				rlog.Warn("LED " + driver.Mac + " no longer seen; drop it")
 				delete(s.leds, driver.Mac)
 				delete(s.driversSeen, driver.Mac)
 				database.RemoveLedStatus(s.db, driver.Mac)
@@ -231,6 +232,7 @@ func (s *Service) sendDump() {
 				dumpSensors[driver.Mac] = driver
 				continue
 			} else {
+				rlog.Warn("Sensor " + driver.Mac + " no longer seen; drop it")
 				delete(s.sensors, driver.Mac)
 				delete(s.driversSeen, driver.Mac)
 				database.RemoveSensorStatus(s.db, driver.Mac)
@@ -247,6 +249,7 @@ func (s *Service) sendDump() {
 				dumpBlinds[driver.Mac] = driver
 				continue
 			} else {
+				rlog.Warn("Blind " + driver.Mac + " no longer seen; drop it")
 				delete(s.blinds, driver.Mac)
 				delete(s.driversSeen, driver.Mac)
 				database.RemoveBlindStatus(s.db, driver.Mac)
@@ -256,18 +259,8 @@ func (s *Service) sendDump() {
 	status.Blinds = dumpBlinds
 	status.Groups = database.GetStatusGroup(s.db)
 
-	dump, err := status.ToJSON()
-	if err != nil {
-		rlog.Error("Could not dump switch status ", err.Error())
-		return
-	}
-
-	err = s.serverSendCommand("/read/switch/"+s.mac+"/"+UrlStatus, dump)
-	if err != nil {
-		rlog.Errorf("Could not dump switch %v status %v", s.mac, err.Error())
-		return
-	}
-	rlog.Infof("Status %v sent to the server", s.mac, dump)
+	dump, _ := status.ToJSON()
+	s.serverSendCommand("/read/switch/"+s.mac+"/"+UrlStatus, dump)
 }
 
 func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {

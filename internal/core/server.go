@@ -32,7 +32,6 @@ func (s *Service) createServerNetwork() error {
 	}
 	s.server = serverNet
 	return nil
-
 }
 
 //RemoteServerConnection connect service to server broker
@@ -74,7 +73,7 @@ func (s *Service) remoteServerConnection() error {
 
 func (s *Service) onSetup(client genericNetwork.Client, msg genericNetwork.Message) {
 	payload := msg.Payload()
-	rlog.Info("onSetup topic: " + msg.Topic() + " payload: " + string(payload))
+	rlog.Info(msg.Topic() + " : " + string(payload))
 	var switchConf sd.SwitchConfig
 	err := json.Unmarshal(payload, &switchConf)
 	if err != nil {
@@ -89,7 +88,7 @@ func (s *Service) onSetup(client genericNetwork.Client, msg genericNetwork.Messa
 
 func (s *Service) onRemoveSetting(client genericNetwork.Client, msg genericNetwork.Message) {
 	payload := msg.Payload()
-	rlog.Info("onRemoveSetting topic: " + msg.Topic() + " payload: " + string(payload))
+	rlog.Info(msg.Topic() + " : " + string(payload))
 	var switchConf sd.SwitchConfig
 	err := json.Unmarshal(payload, &switchConf)
 	if err != nil {
@@ -104,7 +103,7 @@ func (s *Service) onRemoveSetting(client genericNetwork.Client, msg genericNetwo
 
 func (s *Service) onUpdateSetting(client genericNetwork.Client, msg genericNetwork.Message) {
 	payload := msg.Payload()
-	rlog.Info("onUpdateSetting topic: " + msg.Topic() + " payload: " + string(payload))
+	rlog.Info(msg.Topic() + " : " + string(payload))
 	var switchConf sd.SwitchConfig
 	err := json.Unmarshal(payload, &switchConf)
 	if err != nil {
@@ -122,5 +121,11 @@ func (s *Service) serverDisconnect() {
 }
 
 func (s *Service) serverSendCommand(topic, content string) error {
-	return s.server.Iface.SendCommand(topic, content)
+	err := s.server.Iface.SendCommand(topic, content)
+	if err != nil {
+		rlog.Error("Server Cannot send : " + content + " on: " + topic + " Error: " + err.Error())
+	} else {
+		rlog.Debug("Server sent : " + content + " on: " + topic)
+	}
+	return err
 }

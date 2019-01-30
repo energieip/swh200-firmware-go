@@ -64,10 +64,13 @@ func (s *Service) clusterDisconnect() {
 
 func (s *Service) clusterSendCommand(topic, content string) error {
 	var res error
-	for _, cl := range s.cluster {
+	for mac, cl := range s.cluster {
 		err := cl.Iface.SendCommand(topic, content)
 		if err != nil {
+			rlog.Error("Error : " + err.Error() + " ; " + topic + " : " + content + " cluster:  " + mac)
 			res = err
+		} else {
+			rlog.Debug(topic + " : " + content + " cluster: " + mac)
 		}
 	}
 	return res

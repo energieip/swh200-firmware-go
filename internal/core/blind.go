@@ -109,7 +109,7 @@ func (s *Service) updateBlindConfig(driver dblind.BlindConf) {
 }
 
 func (s *Service) onBlindHello(client network.Client, msg network.Message) {
-	rlog.Info("Blind service: Received hello topic: " + msg.Topic() + " payload: " + string(msg.Payload()))
+	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
 	var driver dblind.Blind
 	err := json.Unmarshal(msg.Payload(), &driver)
 	if err != nil {
@@ -138,7 +138,7 @@ func (s *Service) onBlindHello(client network.Client, msg network.Message) {
 
 func (s *Service) onBlindStatus(client network.Client, msg network.Message) {
 	topic := msg.Topic()
-	rlog.Debug("Blind service driver status: Received topic: " + topic + " payload: " + string(msg.Payload()))
+	rlog.Debug(topic + " : " + string(msg.Payload()))
 	var driver dblind.Blind
 	err := json.Unmarshal(msg.Payload(), &driver)
 	if err != nil {

@@ -41,7 +41,7 @@ type Group struct {
 }
 
 func (s *Service) onGroupSensorEvent(client network.Client, msg network.Message) {
-	rlog.Debug("Group sensor Event: Received topic: " + msg.Topic() + " payload: " + string(msg.Payload()))
+	rlog.Debug(msg.Topic() + " : " + string(msg.Payload()))
 	sGrID := strings.Split(msg.Topic(), "/")[3]
 	grID, err := strconv.Atoi(sGrID)
 	if err != nil {
@@ -176,7 +176,8 @@ func (s *Service) groupRun(group *Group) error {
 
 				if group.Runtime.CorrectionInterval == nil || counter == *group.Runtime.CorrectionInterval {
 					if group.Runtime.Auto != nil && *group.Runtime.Auto == true {
-						rlog.Info("Presence ", group.Presence)
+						rlog.Info("Group " + strconv.Itoa(group.Runtime.Group) +
+							" , presence: " + strconv.FormatBool(group.Presence) + " Brightness: " + strconv.Itoa(group.Brightness))
 						if group.Presence {
 							if group.Runtime.RuleBrightness != nil {
 								readBrightness := *group.Runtime.RuleBrightness
@@ -189,7 +190,6 @@ func (s *Service) groupRun(group *Group) error {
 							}
 						} else {
 							//empty room
-							rlog.Info("Room is now empty for group", strconv.Itoa(group.Runtime.Group))
 							group.Setpoint = 0
 						}
 					}
@@ -410,7 +410,7 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 func (s *Service) onGroupCommand(client network.Client, msg network.Message) {
 	payload := msg.Payload()
 	payloadStr := string(payload)
-	rlog.Info("Switch: Received topic: " + msg.Topic() + " payload: " + payloadStr)
+	rlog.Info(msg.Topic() + " : " + payloadStr)
 	var cmd SwitchCmd
 	err := json.Unmarshal(payload, &cmd)
 	if err != nil {

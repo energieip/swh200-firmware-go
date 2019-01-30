@@ -90,8 +90,8 @@ func (s *Service) prepareLedSetup(led dl.LedSetup) {
 	if err != nil {
 		rlog.Error("Cannot update database", err.Error())
 	}
-	_, ok := s.leds[led.Mac]
-	if ok {
+	light, ok := s.leds[led.Mac]
+	if ok && !light.IsConfigured {
 		s.sendLedSetup(led)
 	}
 }
@@ -104,7 +104,7 @@ func (s *Service) updateLedConfig(led dl.LedConf) {
 }
 
 func (s *Service) onLedHello(client network.Client, msg network.Message) {
-	rlog.Info("LED service: Received hello topic: " + msg.Topic() + " payload: " + string(msg.Payload()))
+	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
 	var led dl.Led
 	err := json.Unmarshal(msg.Payload(), &led)
 	if err != nil {
@@ -132,7 +132,7 @@ func (s *Service) onLedHello(client network.Client, msg network.Message) {
 
 func (s *Service) onLedStatus(client network.Client, msg network.Message) {
 	topic := msg.Topic()
-	rlog.Debug("LED service driver status: Received topic: " + topic + " payload: " + string(msg.Payload()))
+	rlog.Debug(topic + " : " + string(msg.Payload()))
 	var led dl.Led
 	err := json.Unmarshal(msg.Payload(), &led)
 	if err != nil {
