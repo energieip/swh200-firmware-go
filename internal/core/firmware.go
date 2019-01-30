@@ -76,6 +76,7 @@ func (s *Service) Initialize(confFile string) error {
 
 	os.Setenv("RLOG_LOG_LEVEL", conf.LogLevel)
 	os.Setenv("RLOG_LOG_NOTIME", "yes")
+	os.Setenv("RLOG_TIME_FORMAT", "2006/01/06 15:04:05.000")
 	rlog.UpdateEnv()
 	rlog.Info("Starting SwitchCore service")
 
@@ -173,6 +174,7 @@ func (s *Service) sendDump() {
 	status.IsConfigured = &s.isConfigured
 	status.FriendlyName = s.friendlyName
 	services := make(map[string]pkg.ServiceStatus)
+	consumption := 0
 
 	for _, c := range s.services {
 		component := pkg.ServiceStatus{}
@@ -205,6 +207,7 @@ func (s *Service) sendDump() {
 			maxDuration := time.Duration(2*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val) <= maxDuration {
 				dumpLeds[driver.Mac] = driver
+				consumption += driver.LinePower
 				continue
 			} else {
 				delete(s.leds, driver.Mac)
@@ -237,6 +240,7 @@ func (s *Service) sendDump() {
 			maxDuration := time.Duration(2*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val) <= maxDuration {
 				dumpBlinds[driver.Mac] = driver
+				consumption += driver.LinePower
 				continue
 			} else {
 				delete(s.blinds, driver.Mac)
@@ -247,6 +251,8 @@ func (s *Service) sendDump() {
 	}
 	status.Blinds = dumpBlinds
 	status.Groups = s.getStatusGroup()
+
+	rlog.Info("=== consumption (in Watts) ", consumption)
 
 	dump, err := status.ToJSON()
 	if err != nil {
