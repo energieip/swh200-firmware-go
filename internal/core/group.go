@@ -267,7 +267,7 @@ func (s *Service) setpointLed(group *Group) {
 	if group.Setpoint > 100 {
 		group.Setpoint = 100
 	}
-	rlog.Info("Set leds now to " + strconv.Itoa(group.Setpoint))
+	rlog.Info("Group " + strconv.Itoa(group.Runtime.Group) + " =>  leds setpoint: " + strconv.Itoa(group.Setpoint))
 	var slopeStart int
 	var slopeStop int
 	if group.Runtime.Auto != nil && *group.Runtime.Auto == true {
