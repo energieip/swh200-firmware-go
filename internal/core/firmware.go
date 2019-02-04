@@ -208,7 +208,7 @@ func (s *Service) sendDump() {
 	for _, driver := range leds {
 		val, ok := s.driversSeen[driver.Mac]
 		if ok {
-			maxDuration := time.Duration(2*driver.DumpFrequency) * time.Millisecond
+			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val) <= maxDuration {
 				dumpLeds[driver.Mac] = driver
 				continue
@@ -225,7 +225,7 @@ func (s *Service) sendDump() {
 	for _, driver := range sensors {
 		val, ok := s.driversSeen[driver.Mac]
 		if ok {
-			maxDuration := time.Duration(2*driver.DumpFrequency) * time.Millisecond
+			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val) <= maxDuration {
 				dumpSensors[driver.Mac] = driver
 				continue
@@ -242,7 +242,7 @@ func (s *Service) sendDump() {
 	for _, driver := range blinds {
 		val, ok := s.driversSeen[driver.Mac]
 		if ok {
-			maxDuration := time.Duration(2*driver.DumpFrequency) * time.Millisecond
+			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val) <= maxDuration {
 				dumpBlinds[driver.Mac] = driver
 				continue
