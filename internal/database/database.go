@@ -255,6 +255,7 @@ func UpdateGroupConfig(db Database, cfg gm.GroupConfig) error {
 func GetGroupsConfig(db Database) map[int]gm.GroupConfig {
 	groups := make(map[int]gm.GroupConfig)
 	stored, err := db.FetchAllRecords(dl.DbConfig, gm.TableStatusName)
+	rlog.Info("==== stored , err", stored, err)
 	if err != nil || stored == nil {
 		return groups
 	}

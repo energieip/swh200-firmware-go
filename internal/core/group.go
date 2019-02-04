@@ -145,7 +145,11 @@ func (s *Service) groupRun(group *Group) error {
 
 					case EventManual:
 						rlog.Info("Received manual event ", group)
-						group.TimeToAuto = *group.Runtime.Watchdog
+						watchdog := 60
+						if group.Runtime.Watchdog != nil {
+							watchdog = *group.Runtime.Watchdog
+						}
+						group.TimeToAuto = watchdog
 						s.setpointLed(group)
 						s.dumpGroupStatus(*group)
 
@@ -220,6 +224,11 @@ func (s *Service) computeSensorsValues(group *Group) {
 	presence := group.Sensors[refMac].Presence
 	group.Brightness = group.Sensors[refMac].Brightness
 
+	sensorRule := gm.SensorAverage
+	if group.Runtime.SensorRule != nil {
+		sensorRule = *group.Runtime.SensorRule
+	}
+
 	for mac, sensor := range group.Sensors {
 		if mac == refMac {
 			continue
@@ -227,7 +236,8 @@ func (s *Service) computeSensorsValues(group *Group) {
 		if sensor.Presence {
 			presence = true
 		}
-		switch *group.Runtime.SensorRule {
+
+		switch sensorRule {
 		case gm.SensorAverage:
 			group.Brightness += sensor.Brightness / len(group.Sensors)
 		case gm.SensorMax:

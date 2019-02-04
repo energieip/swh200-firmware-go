@@ -95,12 +95,10 @@ func (s *Service) Initialize(confFile string) error {
 	s.db = db
 
 	groups := database.GetGroupsConfig(s.db)
+	rlog.Info("=== get groups ", groups)
 	for grID, group := range groups {
-		if _, ok := s.groups[grID]; !ok {
-			s.createGroup(group)
-			continue
-		}
-		s.reloadGroupConfig(grID, group)
+		rlog.Info("Restore group ", grID)
+		s.createGroup(group)
 	}
 
 	err = s.createServerNetwork()
