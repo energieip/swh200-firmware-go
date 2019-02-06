@@ -118,6 +118,7 @@ func (s *Service) dumpGroupStatus(group Group) error {
 		SlopeStopAuto:      slopeStopAuto,
 		SlopeStopManual:    slopeStopManual,
 		Leds:               group.Runtime.Leds,
+		Blinds:             group.Runtime.Blinds,
 		Sensors:            group.Runtime.Sensors,
 		RuleBrightness:     group.Runtime.RuleBrightness,
 		RulePresence:       group.Runtime.RulePresence,
@@ -396,6 +397,9 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 	}
 	if new.Leds != nil {
 		gr.Runtime.Leds = new.Leds
+	}
+	if new.Blinds != nil {
+		gr.Runtime.Blinds = new.Blinds
 	}
 	if new.Sensors != nil {
 		gr.Runtime.Sensors = new.Sensors
