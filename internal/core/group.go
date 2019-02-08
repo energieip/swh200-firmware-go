@@ -424,7 +424,7 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 func (s *Service) onGroupCommand(client network.Client, msg network.Message) {
 	payload := msg.Payload()
 	payloadStr := string(payload)
-	rlog.Info(msg.Topic() + " : " + payloadStr)
+	rlog.Info("Received BLE cmd" + msg.Topic() + " : " + payloadStr)
 	var cmd SwitchCmd
 	err := json.Unmarshal(payload, &cmd)
 	if err != nil {
@@ -436,7 +436,6 @@ func (s *Service) onGroupCommand(client network.Client, msg network.Message) {
 		rlog.Info("Group " + strconv.Itoa(grID) + " not running on this switch skip it")
 		return
 	}
-	rlog.Info("Group " + strconv.Itoa(grID) + " reload it")
 	group := dgroup.GroupConfig{
 		Group:              cmd.Group,
 		SetpointLeds:       cmd.Leds,

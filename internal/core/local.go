@@ -61,7 +61,7 @@ func (s *Service) localSendCommand(topic, content string) error {
 	if err != nil {
 		rlog.Error("Local cannot send : " + content + " on: " + topic + " Error: " + err.Error())
 	} else {
-		rlog.Info("Local Sent : " + content + " on: " + topic)
+		rlog.Debug("Local Sent : " + content + " on: " + topic)
 	}
 	return err
 }

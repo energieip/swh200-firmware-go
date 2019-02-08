@@ -128,7 +128,7 @@ func (s *Service) onBlindHello(client network.Client, msg network.Message) {
 		rlog.Error("Error during database update ", err.Error())
 		return
 	}
-	rlog.Debugf("New Blind driver %v stored on database ", driver.Mac)
+	rlog.Debug("New Blind driver stored on database " + driver.Mac)
 
 	cfg := database.GetConfigBlind(s.db, driver.Mac)
 	if cfg != nil {

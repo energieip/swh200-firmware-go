@@ -133,7 +133,7 @@ func (s *Service) onSensorHello(client network.Client, msg network.Message) {
 		rlog.Error("Error during database update ", err.Error())
 		return
 	}
-	rlog.Debug("New Sensor driver stored on database :" + sensor.Mac)
+	rlog.Info("New Sensor driver stored on database :" + sensor.Mac)
 	cfg := database.GetConfigSensor(s.db, sensor.Mac)
 	if cfg != nil {
 		s.sendSensorSetup(*cfg)
