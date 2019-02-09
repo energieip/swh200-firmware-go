@@ -2,7 +2,7 @@
 Description=Switch Firmware service
 After=mosquitto.service rethinkdb.service network-online.target
 Wants=network-online.target
-PartOf=rethinkdb.service network-online.target
+PartOf=rethinkdb.service network-online.target mosquitto.service
 
 [Service]
 Type=simple
