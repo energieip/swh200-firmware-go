@@ -265,6 +265,7 @@ func (s *Service) computeSensorsValues(group *Group) {
 			}
 		} else {
 			group.Presence = true
+			group.PresenceTimeout = *group.Runtime.RulePresence
 		}
 	} else {
 		group.Presence = true

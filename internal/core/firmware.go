@@ -14,7 +14,7 @@ import (
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
 	sd "github.com/energieip/common-components-go/pkg/dswitch"
 	pkg "github.com/energieip/common-components-go/pkg/service"
-	"github.com/energieip/common-tools-go/pkg/tools"
+	"github.com/energieip/common-components-go/pkg/tools"
 	"github.com/romana/rlog"
 )
 
