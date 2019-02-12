@@ -23,9 +23,8 @@ func (s *Service) sendLedUpdate(led dl.LedConf) {
 }
 
 func (s *Service) sendLedGroupSetpoint(mac string, setpoint int, slopeStart int, slopeStop int) {
-	_, ok := s.leds[mac]
-	if !ok {
-		// rlog.Warn("Led " + mac + " not plugged to this switch")
+	ld, ok := s.leds[mac]
+	if !ok || !ld.Auto {
 		return
 	}
 	conf := dl.LedConf{
