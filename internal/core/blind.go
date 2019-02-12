@@ -95,8 +95,8 @@ func (s *Service) prepareBlindSetup(driver dblind.BlindSetup) {
 	if err != nil {
 		rlog.Error("Cannot update database", err.Error())
 	}
-	_, ok := s.blinds[driver.Mac]
-	if ok {
+	bld, ok := s.blinds[driver.Mac]
+	if ok && !bld.IsConfigured {
 		s.sendBlindSetup(driver)
 	}
 }
