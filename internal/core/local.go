@@ -36,6 +36,7 @@ func (s *Service) localConnection() error {
 	cbkLocal["/read/blind/+/"+dblind.UrlHello] = s.onBlindHello
 	cbkLocal["/read/blind/+/"+dblind.UrlStatus] = s.onBlindStatus
 	cbkLocal["/read/group/+/events/sensor"] = s.onGroupSensorEvent
+	cbkLocal["/read/group/+/error/sensor"] = s.onGroupErrorEvent
 	cbkLocal["/write/group/+/commands"] = s.onGroupCommand
 
 	confLocal := genericNetwork.NetworkConfig{

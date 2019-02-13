@@ -36,6 +36,7 @@ type Group struct {
 	PresenceTimeout    int
 	Error              int
 	Sensors            map[string]SensorEvent
+	SensorsIssue       map[string]bool
 	SetpointBlinds     *int
 	SetpointSlatBlinds *int
 	LastPresenceStatus bool
@@ -64,6 +65,36 @@ func (s *Service) onGroupSensorEvent(client network.Client, msg network.Message)
 	}
 
 	group.Sensors[sensor.Mac] = sensor
+	_, ok = group.SensorsIssue[sensor.Mac]
+	if ok {
+		//sensor no longer problematic
+		delete(group.SensorsIssue, sensor.Mac)
+	}
+
+}
+
+func (s *Service) onGroupErrorEvent(client network.Client, msg network.Message) {
+	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
+	sGrID := strings.Split(msg.Topic(), "/")[3]
+	grID, err := strconv.Atoi(sGrID)
+	if err != nil {
+		return
+	}
+
+	group, ok := s.groups[grID]
+	if !ok {
+		rlog.Debug("Skip group")
+		return
+	}
+
+	var sensor SensorErrorEvent
+	err = json.Unmarshal(msg.Payload(), &sensor)
+	if err != nil {
+		rlog.Error("Error during parsing", err.Error())
+		return
+	}
+
+	group.SensorsIssue[sensor.Mac] = true
 }
 
 func (s *Service) dumpGroupStatus(group Group) error {
@@ -232,6 +263,11 @@ func (s *Service) isManualMode(group *Group) bool {
 
 func (s *Service) isPresenceDetected(group *Group) bool {
 	for _, sensor := range group.Sensors {
+		_, ok := group.SensorsIssue[sensor.Mac]
+		if ok {
+			// do not take it to account a sensor with an issue
+			continue
+		}
 		if sensor.Presence {
 			return true
 		}
@@ -288,6 +324,11 @@ func (s *Service) computeBrightness(group *Group) {
 	//compute sensor values
 	refMac := ""
 	for mac := range group.Sensors {
+		_, ok := group.SensorsIssue[mac]
+		if ok {
+			// do not take it to account a sensor with an issue
+			continue
+		}
 		refMac = mac
 		break
 	}
@@ -295,7 +336,13 @@ func (s *Service) computeBrightness(group *Group) {
 		//No sensors in this group
 		return
 	}
-	group.Brightness = group.Sensors[refMac].Brightness / len(group.Sensors)
+	nbValidSensors := len(group.Sensors) - len(group.SensorsIssue)
+	if nbValidSensors <= 0 {
+		//no valid sensor found
+		return
+	}
+
+	group.Brightness = group.Sensors[refMac].Brightness / nbValidSensors
 
 	sensorRule := gm.SensorAverage
 	if group.Runtime.SensorRule != nil {
@@ -307,9 +354,15 @@ func (s *Service) computeBrightness(group *Group) {
 			continue
 		}
 
+		_, ok := group.SensorsIssue[sensor.Mac]
+		if ok {
+			// do not take it to account a sensor with an issue
+			continue
+		}
+
 		switch sensorRule {
 		case gm.SensorAverage:
-			group.Brightness += sensor.Brightness / len(group.Sensors)
+			group.Brightness += sensor.Brightness / nbValidSensors
 		case gm.SensorMax:
 			if group.Brightness < sensor.Brightness {
 				group.Brightness = sensor.Brightness
@@ -365,13 +418,18 @@ func (s *Service) createGroup(runtime gm.GroupConfig) {
 		runtime.Auto = &auto
 	}
 	group := Group{
-		Event:   make(chan map[string]*gm.GroupConfig),
-		Runtime: runtime,
-		Scale:   10,
-		Sensors: make(map[string]SensorEvent),
+		Event:        make(chan map[string]*gm.GroupConfig),
+		Runtime:      runtime,
+		Scale:        10,
+		Sensors:      make(map[string]SensorEvent),
+		SensorsIssue: make(map[string]bool),
 	}
 	for _, sensor := range runtime.Sensors {
 		group.Sensors[sensor] = SensorEvent{}
+	}
+	for _, sensor := range runtime.Sensors {
+		//to be sure of the state after a creation or a restart
+		group.SensorsIssue[sensor] = true
 	}
 	s.groups[runtime.Group] = group
 	s.groupRun(&group)
@@ -464,11 +522,17 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 				gr.Sensors[sensor] = SensorEvent{}
 			}
 			seen[sensor] = true
+			// do not take in to consideration until we received valid information from the sensor
+			gr.SensorsIssue[sensor] = true
 		}
 		for mac := range gr.Sensors {
 			_, ok := seen[mac]
 			if !ok {
 				delete(gr.Sensors, mac)
+				_, ok := gr.SensorsIssue[mac]
+				if ok {
+					delete(gr.SensorsIssue, mac)
+				}
 			}
 		}
 	}

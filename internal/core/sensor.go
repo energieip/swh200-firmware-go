@@ -18,6 +18,30 @@ type SensorEvent struct {
 	Presence    bool   `json:"presence"`
 }
 
+type SensorErrorEvent struct {
+	Mac string `json:"mac"`
+}
+
+//ToJSON dump struct in json
+func (sensor SensorErrorEvent) ToJSON() (string, error) {
+	inrec, err := json.Marshal(sensor)
+	if err != nil {
+		return "", err
+	}
+	return string(inrec[:]), err
+}
+
+//ToSensorErrorEvent convert interface to Sensor object
+func ToSensorErrorEvent(val interface{}) (*SensorErrorEvent, error) {
+	var cell SensorErrorEvent
+	inrec, err := json.Marshal(val)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(inrec, &cell)
+	return &cell, err
+}
+
 //ToJSON dump struct in json
 func (sensor SensorEvent) ToJSON() (string, error) {
 	inrec, err := json.Marshal(sensor)
@@ -111,11 +135,12 @@ func (s *Service) removeSensor(mac string) {
 			IsConfigured: &isConfigured,
 		}
 		s.sendSensorUpdate(remove)
+		delete(s.driversSeen, mac)
 	}
 }
 
 func (s *Service) onSensorHello(client network.Client, msg network.Message) {
-	rlog.Debug(msg.Topic() + " : " + string(msg.Payload()))
+	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
 	var sensor ds.Sensor
 	err := json.Unmarshal(msg.Payload(), &sensor)
 	if err != nil {
@@ -133,7 +158,6 @@ func (s *Service) onSensorHello(client network.Client, msg network.Message) {
 		rlog.Error("Error during database update ", err.Error())
 		return
 	}
-	rlog.Info("New Sensor driver stored on database :" + sensor.Mac)
 	cfg := database.GetConfigSensor(s.db, sensor.Mac)
 	if cfg != nil {
 		s.sendSensorSetup(*cfg)
@@ -158,12 +182,26 @@ func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 		rlog.Error("Error during database update ", err.Error())
 	}
 
-	url := "/read/group/" + strconv.Itoa(sensor.Group) + "/events/sensor"
-	evt := SensorEvent{
-		Mac:         sensor.Mac,
-		Temperature: sensor.Temperature,
-		Brightness:  sensor.Brightness,
-		Presence:    sensor.Presence,
+	if sensor.Error == 0 {
+		url := "/read/group/" + strconv.Itoa(sensor.Group) + "/events/sensor"
+		evt := SensorEvent{
+			Mac:         sensor.Mac,
+			Temperature: sensor.Temperature,
+			Brightness:  sensor.Brightness,
+			Presence:    sensor.Presence,
+		}
+		dump, _ := evt.ToJSON()
+		s.clusterSendCommand(url, dump)
+		s.localSendCommand(url, dump)
+	} else {
+		s.sendInvalidStatus(sensor)
+	}
+}
+
+func (s *Service) sendInvalidStatus(sensor ds.Sensor) {
+	url := "/read/group/" + strconv.Itoa(sensor.Group) + "/error/sensor"
+	evt := SensorErrorEvent{
+		Mac: sensor.Mac,
 	}
 	dump, _ := evt.ToJSON()
 

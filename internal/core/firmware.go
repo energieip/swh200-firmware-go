@@ -231,6 +231,7 @@ func (s *Service) sendDump() {
 				continue
 			} else {
 				rlog.Warn("Sensor " + driver.Mac + " no longer seen; drop it")
+				s.sendInvalidStatus(driver)
 				delete(s.sensors, driver.Mac)
 				delete(s.driversSeen, driver.Mac)
 				database.RemoveSensorStatus(s.db, driver.Mac)
