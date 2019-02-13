@@ -457,6 +457,20 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 	}
 	if new.Sensors != nil {
 		gr.Runtime.Sensors = new.Sensors
+		seen := make(map[string]bool)
+		for _, sensor := range new.Sensors {
+			_, ok := gr.Sensors[sensor]
+			if !ok {
+				gr.Sensors[sensor] = SensorEvent{}
+			}
+			seen[sensor] = true
+		}
+		for mac := range gr.Sensors {
+			_, ok := seen[mac]
+			if !ok {
+				delete(gr.Sensors, mac)
+			}
+		}
 	}
 	if new.RuleBrightness != nil {
 		gr.Runtime.RuleBrightness = new.RuleBrightness
