@@ -38,6 +38,8 @@ type Group struct {
 	Sensors            map[string]SensorEvent
 	SetpointBlinds     *int
 	SetpointSlatBlinds *int
+	LastPresenceStatus bool
+	Counter            int
 }
 
 func (s *Service) onGroupSensorEvent(client network.Client, msg network.Message) {
@@ -132,7 +134,7 @@ func (s *Service) dumpGroupStatus(group Group) error {
 func (s *Service) groupRun(group *Group) error {
 	ticker := time.NewTicker(time.Second)
 	go func() {
-		counter := 0
+		group.Counter = 0
 		for {
 			select {
 			case events := <-group.Event:
@@ -146,7 +148,7 @@ func (s *Service) groupRun(group *Group) error {
 
 					case EventManual:
 						rlog.Info("Received manual event ", group)
-						watchdog := 60
+						watchdog := 0
 						if group.Runtime.Watchdog != nil {
 							watchdog = *group.Runtime.Watchdog
 						}
@@ -160,50 +162,60 @@ func (s *Service) groupRun(group *Group) error {
 					}
 				}
 			case <-ticker.C:
-				counter++
-
-				if len(group.Sensors) > 0 {
-					// compute timetoAuto and switch back to Auto mode
-					if group.TimeToAuto <= 0 && (group.Runtime.Auto == nil || *group.Runtime.Auto == false) {
-						auto := true
-						group.Runtime.Auto = &auto
-						rlog.Info("Switch group " + strconv.Itoa(group.Runtime.Group) + " back to Automatic mode")
-					}
-					if group.TimeToAuto > 0 {
-						group.TimeToAuto--
-					}
-				} else {
-					//When no sensor are presents the group stay in manual mode forever
-					auto := false
-					group.Runtime.Auto = &auto
-				}
-				s.computeSensorsValues(group)
-
-				if group.Runtime.CorrectionInterval == nil || counter == *group.Runtime.CorrectionInterval {
-					if group.Runtime.Auto != nil && *group.Runtime.Auto == true {
-						rlog.Info("Group " + strconv.Itoa(group.Runtime.Group) +
-							" , presence: " + strconv.FormatBool(group.Presence) + " Brightness: " + strconv.Itoa(group.Brightness))
-						if group.Presence {
-							if group.Runtime.RuleBrightness != nil {
-								readBrightness := *group.Runtime.RuleBrightness
-								if group.Brightness > readBrightness {
-									group.Setpoint -= group.Scale
-								}
-								if group.Brightness < readBrightness {
-									group.Setpoint += group.Scale
-								}
+				group.Counter++
+				if s.isManualMode(group) {
+					if len(group.Sensors) > 0 {
+						// compute TimeToAuto and switch back to Auto mode
+						if group.Runtime.Watchdog != nil {
+							//decrease only when a rule exists
+							if group.TimeToAuto <= 0 {
+								auto := true
+								group.Runtime.Auto = &auto
+								rlog.Info("Switch group " + strconv.Itoa(group.Runtime.Group) + " back to Automatic mode")
+							} else {
+								group.TimeToAuto--
 							}
-						} else {
-							//empty room
+						}
+					} else {
+						//When no sensor are presents the group stay in manual mode forever
+						auto := false
+						group.Runtime.Auto = &auto
+					}
+				}
+
+				//force re-check mode due to the switch back manual to auto mode
+				if !s.isManualMode(group) {
+					s.computePresence(group)
+					s.computeBrightness(group)
+					if group.Presence != group.LastPresenceStatus {
+						if !group.Presence {
+							//leave room empty
 							group.Setpoint = 0
+							rlog.Info("Group " + strconv.Itoa(group.Runtime.Group) + " : is now empty")
+						} else {
+							//someone come In
+							s.updateBrightness(group)
+							rlog.Info("Group " + strconv.Itoa(group.Runtime.Group) + " : someone Come in")
+						}
+						s.setpointLed(group)
+					} else {
+						if group.Presence {
+							if group.Runtime.CorrectionInterval == nil || group.Counter >= *group.Runtime.CorrectionInterval {
+								s.updateBrightness(group)
+								s.setpointLed(group)
+								group.Counter = 0
+							}
 						}
 					}
+				} else {
+					// Force reset led to be sure that the state is re-apply
+					// if one led switch back from manual mode
 					s.setpointLed(group)
-					err := s.dumpGroupStatus(*group)
-					if err != nil {
-						rlog.Errorf("Cannot dump status to database for " + strconv.Itoa(group.Runtime.Group) + " err " + err.Error())
-					}
-					counter = 0
+				}
+
+				err := s.dumpGroupStatus(*group)
+				if err != nil {
+					rlog.Errorf("Cannot dump status to database for " + strconv.Itoa(group.Runtime.Group) + " err " + err.Error())
 				}
 			}
 		}
@@ -211,7 +223,68 @@ func (s *Service) groupRun(group *Group) error {
 	return nil
 }
 
-func (s *Service) computeSensorsValues(group *Group) {
+func (s *Service) isManualMode(group *Group) bool {
+	if group.Runtime.Auto == nil || *group.Runtime.Auto == false {
+		return true
+	}
+	return false
+}
+
+func (s *Service) isPresenceDetected(group *Group) bool {
+	for _, sensor := range group.Sensors {
+		if sensor.Presence {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Service) computePresence(group *Group) {
+	group.LastPresenceStatus = group.Presence
+	presence := s.isPresenceDetected(group)
+
+	if len(group.Sensors) == 0 {
+		//stay in manual mode
+		group.Presence = true
+		return
+	}
+
+	if group.Runtime.RulePresence != nil {
+		if !presence {
+			if group.PresenceTimeout <= 0 {
+				group.PresenceTimeout = *group.Runtime.RulePresence
+			} else {
+				group.PresenceTimeout--
+				if group.PresenceTimeout == 0 {
+					group.Presence = false
+				}
+			}
+		} else {
+			group.Presence = true
+			group.PresenceTimeout = *group.Runtime.RulePresence
+		}
+	} else {
+		//no delay for leaving the room detection
+		group.Presence = presence
+	}
+}
+
+func (s *Service) updateBrightness(group *Group) {
+	if group.Runtime.RuleBrightness != nil {
+		readBrightness := *group.Runtime.RuleBrightness
+		if group.Brightness > readBrightness {
+			group.Setpoint -= group.Scale
+		}
+		if group.Brightness < readBrightness {
+			group.Setpoint += group.Scale
+		}
+	} else {
+		// we do not have brightness rule. We expect LEDs to be set to 100
+		group.Setpoint = 100
+	}
+}
+
+func (s *Service) computeBrightness(group *Group) {
 	//compute sensor values
 	refMac := ""
 	for mac := range group.Sensors {
@@ -222,8 +295,7 @@ func (s *Service) computeSensorsValues(group *Group) {
 		//No sensors in this group
 		return
 	}
-	presence := group.Sensors[refMac].Presence
-	group.Brightness = group.Sensors[refMac].Brightness
+	group.Brightness = group.Sensors[refMac].Brightness / len(group.Sensors)
 
 	sensorRule := gm.SensorAverage
 	if group.Runtime.SensorRule != nil {
@@ -233,9 +305,6 @@ func (s *Service) computeSensorsValues(group *Group) {
 	for mac, sensor := range group.Sensors {
 		if mac == refMac {
 			continue
-		}
-		if sensor.Presence {
-			presence = true
 		}
 
 		switch sensorRule {
@@ -250,25 +319,6 @@ func (s *Service) computeSensorsValues(group *Group) {
 				group.Brightness = sensor.Brightness
 			}
 		}
-	}
-
-	// manage presence group timeout
-	if group.Runtime.RulePresence != nil {
-		if !presence {
-			if group.PresenceTimeout <= 0 {
-				group.PresenceTimeout = *group.Runtime.RulePresence
-			} else {
-				group.PresenceTimeout--
-			}
-			if group.PresenceTimeout == 0 {
-				group.Presence = false
-			}
-		} else {
-			group.Presence = true
-			group.PresenceTimeout = *group.Runtime.RulePresence
-		}
-	} else {
-		group.Presence = true
 	}
 }
 
@@ -392,6 +442,9 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 
 	if new.CorrectionInterval != nil {
 		gr.Runtime.CorrectionInterval = new.CorrectionInterval
+		if gr.Counter > *gr.Runtime.CorrectionInterval {
+			gr.Counter = *gr.Runtime.CorrectionInterval
+		}
 	}
 	if new.SensorRule != nil {
 		gr.Runtime.SensorRule = new.SensorRule
@@ -410,6 +463,10 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 	}
 	if new.RulePresence != nil {
 		gr.Runtime.RulePresence = new.RulePresence
+		if gr.PresenceTimeout > *gr.Runtime.RulePresence {
+			//force decrease counter
+			gr.PresenceTimeout = *gr.Runtime.RulePresence
+		}
 	}
 	if new.FriendlyName != nil {
 		gr.Runtime.FriendlyName = new.FriendlyName
@@ -419,6 +476,10 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 	}
 	if new.Watchdog != nil {
 		gr.Runtime.Watchdog = new.Watchdog
+		if gr.TimeToAuto > *gr.Runtime.Watchdog {
+			//force decrease counter
+			gr.TimeToAuto = *gr.Runtime.Watchdog
+		}
 	}
 }
 
