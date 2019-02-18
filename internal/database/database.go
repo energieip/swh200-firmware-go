@@ -119,6 +119,20 @@ func GetObjectID(db Database, dbName, tbName string, criteria map[string]interfa
 	return ""
 }
 
+func GetStatusLed(db Database, mac string) *dl.Led {
+	criteria := make(map[string]interface{})
+	criteria["Mac"] = mac
+	stored, err := db.GetRecord(dl.DbStatus, dl.TableName, criteria)
+	if err != nil || stored == nil {
+		return nil
+	}
+	light, err := dl.ToLed(stored)
+	if err != nil {
+		return nil
+	}
+	return light
+}
+
 func GetStatusLeds(db Database) map[string]dl.Led {
 	leds := make(map[string]dl.Led)
 	stored, err := db.FetchAllRecords(dl.DbStatus, dl.TableName)

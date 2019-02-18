@@ -45,6 +45,7 @@ type Service struct {
 	lastSystemUpgradeDate string
 	friendlyName          string
 	leds                  map[string]dl.Led
+	ledsToAuto            map[string]*int
 	sensors               map[string]ds.Sensor
 	groups                map[int]Group
 	blinds                map[string]dblind.Blind
@@ -60,6 +61,7 @@ func (s *Service) Initialize(confFile string) error {
 	s.clientID = "Switch" + hostname
 	s.events = make(chan string)
 	s.leds = make(map[string]dl.Led)
+	s.ledsToAuto = make(map[string]*int)
 	s.sensors = make(map[string]ds.Sensor)
 	s.blinds = make(map[string]dblind.Blind)
 	s.groups = make(map[int]Group)
@@ -216,6 +218,10 @@ func (s *Service) sendDump() {
 				rlog.Warn("LED " + driver.Mac + " no longer seen; drop it")
 				delete(s.leds, driver.Mac)
 				delete(s.driversSeen, driver.Mac)
+				_, ok := s.ledsToAuto[driver.Mac]
+				if ok {
+					delete(s.ledsToAuto, driver.Mac)
+				}
 				database.RemoveLedStatus(s.db, driver.Mac)
 			}
 		}
@@ -385,6 +391,7 @@ func (s *Service) systemUpdate(switchConfig sd.SwitchConfig) {
 func (s *Service) Run() error {
 	s.sendHello()
 	go s.cronDump()
+	go s.cronLedMode()
 	for {
 		select {
 		case serverEvents := <-s.server.Events:
@@ -401,6 +408,7 @@ func (s *Service) Run() error {
 								s.deleteGroup(group.Runtime)
 							}
 							s.leds = make(map[string]dl.Led)
+							s.ledsToAuto = make(map[string]*int)
 							s.sensors = make(map[string]ds.Sensor)
 							s.blinds = make(map[string]dblind.Blind)
 							s.groups = make(map[int]Group)

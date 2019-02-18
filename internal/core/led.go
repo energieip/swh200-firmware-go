@@ -14,17 +14,58 @@ func (s *Service) sendLedSetup(led dl.LedSetup) {
 	url := "/write/led/" + led.Mac + "/" + dl.UrlSetup
 	dump, _ := led.ToJSON()
 	s.localSendCommand(url, dump)
+	if led.Auto != nil {
+		if *led.Auto == false {
+			//start countdown
+			watchdog := 0
+			if led.Watchdog != nil {
+				watchdog = *led.Watchdog
+			} else {
+				cfg := database.GetConfigLed(s.db, led.Mac)
+				if cfg.Watchdog != nil {
+					watchdog = *cfg.Watchdog
+				}
+			}
+			s.ledsToAuto[led.Mac] = &watchdog
+		} else {
+			_, ok := s.ledsToAuto[led.Mac]
+			if ok {
+				delete(s.ledsToAuto, led.Mac)
+			}
+		}
+	}
 }
 
 func (s *Service) sendLedUpdate(led dl.LedConf) {
 	url := "/write/led/" + led.Mac + "/" + dl.UrlSetting
 	dump, _ := led.ToJSON()
 	s.localSendCommand(url, dump)
+
+	if led.Auto != nil {
+		if *led.Auto == false {
+			//start countdown
+			watchdog := 0
+			if led.Watchdog != nil {
+				watchdog = *led.Watchdog
+			} else {
+				cfg := database.GetConfigLed(s.db, led.Mac)
+				if cfg.Watchdog != nil {
+					watchdog = *cfg.Watchdog
+				}
+			}
+			s.ledsToAuto[led.Mac] = &watchdog
+		} else {
+			_, ok := s.ledsToAuto[led.Mac]
+			if ok {
+				delete(s.ledsToAuto, led.Mac)
+			}
+		}
+	}
 }
 
 func (s *Service) sendLedGroupSetpoint(mac string, setpoint int, slopeStart int, slopeStop int) {
-	ld, ok := s.leds[mac]
-	if !ok || !ld.Auto {
+	_, ok := s.leds[mac]
+	if !ok {
 		return
 	}
 	conf := dl.LedConf{
@@ -40,7 +81,11 @@ func (s *Service) removeLed(mac string) {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
 	s.db.DeleteRecord(dl.DbConfig, dl.TableName, criteria)
-	_, ok := s.leds[mac]
+	_, ok := s.ledsToAuto[mac]
+	if ok {
+		delete(s.ledsToAuto, mac)
+	}
+	_, ok = s.leds[mac]
 	if !ok {
 		return
 	}
@@ -140,8 +185,46 @@ func (s *Service) onLedStatus(client network.Client, msg network.Message) {
 	}
 	s.driversSeen[led.Mac] = time.Now().UTC()
 	led.SwitchMac = s.mac
+	val, ok := s.ledsToAuto[led.Mac]
+	if ok && val != nil {
+		led.TimeToAuto = *val
+	}
+	cfg := database.GetConfigLed(s.db, led.Mac)
+	if cfg != nil && cfg.Watchdog != nil {
+		led.Watchdog = *cfg.Watchdog
+	}
+
 	err = s.updateLedStatus(led)
 	if err != nil {
 		rlog.Error("Error during database update ", err.Error())
+	}
+}
+
+func (s *Service) cronLedMode() {
+	timerDump := time.NewTicker(time.Second)
+	for {
+		select {
+		case <-timerDump.C:
+			for mac, val := range s.ledsToAuto {
+				if val == nil {
+					continue
+				}
+
+				if *val <= 0 {
+					auto := true
+
+					cfg := dl.LedConf{
+						Mac:  mac,
+						Auto: &auto,
+					}
+					s.sendLedUpdate(cfg)
+					delete(s.ledsToAuto, mac)
+				} else {
+					tempo := *val
+					tempo--
+					s.ledsToAuto[mac] = &tempo
+				}
+			}
+		}
 	}
 }
