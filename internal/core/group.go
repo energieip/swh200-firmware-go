@@ -27,6 +27,7 @@ type Group struct {
 	Event              chan map[string]*gm.GroupConfig
 	Runtime            gm.GroupConfig
 	Setpoint           int
+	FirstDaySetpoint   int
 	Brightness         int
 	Presence           bool
 	Slope              int
@@ -37,6 +38,7 @@ type Group struct {
 	Error              int
 	Sensors            map[string]SensorEvent
 	SensorsIssue       map[string]bool
+	FirstDay           map[string]bool
 	SetpointBlinds     *int
 	SetpointSlatBlinds *int
 	LastPresenceStatus bool
@@ -137,26 +139,29 @@ func (s *Service) dumpGroupStatus(group Group) error {
 		watchdog = *group.Runtime.Watchdog
 	}
 	status := gm.GroupStatus{
-		Group:              group.Runtime.Group,
-		Auto:               auto,
-		TimeToAuto:         group.TimeToAuto,
-		SensorRule:         sensorRule,
-		Error:              group.Error,
-		Presence:           group.Presence,
-		TimeToLeave:        group.PresenceTimeout,
-		CorrectionInterval: correctionInterval,
-		SetpointLeds:       group.Setpoint,
-		SlopeStartAuto:     slopeStartAuto,
-		SlopeStartManual:   slopeStartManual,
-		SlopeStopAuto:      slopeStopAuto,
-		SlopeStopManual:    slopeStopManual,
-		Leds:               group.Runtime.Leds,
-		Blinds:             group.Runtime.Blinds,
-		Sensors:            group.Runtime.Sensors,
-		RuleBrightness:     group.Runtime.RuleBrightness,
-		RulePresence:       group.Runtime.RulePresence,
-		Watchdog:           watchdog,
-		FriendlyName:       name,
+		Group:                group.Runtime.Group,
+		Auto:                 auto,
+		TimeToAuto:           group.TimeToAuto,
+		SensorRule:           sensorRule,
+		Error:                group.Error,
+		Presence:             group.Presence,
+		TimeToLeave:          group.PresenceTimeout,
+		CorrectionInterval:   correctionInterval,
+		SetpointLeds:         group.Setpoint,
+		SlopeStartAuto:       slopeStartAuto,
+		SlopeStartManual:     slopeStartManual,
+		SlopeStopAuto:        slopeStopAuto,
+		SlopeStopManual:      slopeStopManual,
+		Leds:                 group.Runtime.Leds,
+		Blinds:               group.Runtime.Blinds,
+		Sensors:              group.Runtime.Sensors,
+		RuleBrightness:       group.Runtime.RuleBrightness,
+		RulePresence:         group.Runtime.RulePresence,
+		Watchdog:             watchdog,
+		FriendlyName:         name,
+		FirstDayOffset:       group.Runtime.FirstDayOffset,
+		FirstDay:             group.Runtime.FirstDay,
+		SetpointLedsFirstDay: group.FirstDaySetpoint,
 	}
 
 	return database.UpdateGroupStatus(s.db, status)
@@ -222,6 +227,7 @@ func (s *Service) groupRun(group *Group) error {
 						if !group.Presence {
 							//leave room empty
 							group.Setpoint = 0
+							group.FirstDaySetpoint = 0
 							rlog.Info("Group " + strconv.Itoa(group.Runtime.Group) + " : is now empty")
 						} else {
 							//someone come In
@@ -309,14 +315,32 @@ func (s *Service) updateBrightness(group *Group) {
 	if group.Runtime.RuleBrightness != nil {
 		readBrightness := *group.Runtime.RuleBrightness
 		if group.Brightness > readBrightness {
-			group.Setpoint -= group.Scale
+			//decrease light
+			if group.Runtime.FirstDayOffset != nil {
+				offset := *group.Runtime.FirstDayOffset
+				group.FirstDaySetpoint -= group.Scale
+				if (100-group.FirstDaySetpoint) > offset || group.FirstDaySetpoint == 0 {
+					group.Setpoint -= group.Scale
+				}
+			} else {
+				group.Setpoint -= group.Scale
+			}
 		}
 		if group.Brightness < readBrightness {
 			group.Setpoint += group.Scale
+			if group.Runtime.FirstDayOffset != nil {
+				offset := *group.Runtime.FirstDayOffset
+				if group.Setpoint <= offset && group.Setpoint != 100 {
+					group.FirstDaySetpoint = 0
+				} else {
+					group.FirstDaySetpoint += group.Scale
+				}
+			}
 		}
 	} else {
 		// we do not have brightness rule. We expect LEDs to be set to 100
 		group.Setpoint = 100
+		group.FirstDaySetpoint = 100
 	}
 }
 
@@ -382,10 +406,20 @@ func (s *Service) setpointLed(group *Group) {
 	if group.Setpoint > 100 {
 		group.Setpoint = 100
 	}
+	if group.FirstDaySetpoint < 0 {
+		group.FirstDaySetpoint = 0
+	}
+	if group.FirstDaySetpoint > 100 {
+		group.FirstDaySetpoint = 100
+	}
 	rlog.Info("Group " + strconv.Itoa(group.Runtime.Group) + " =>  leds setpoint: " + strconv.Itoa(group.Setpoint))
 	var slopeStart int
 	var slopeStop int
-	if group.Runtime.Auto != nil && *group.Runtime.Auto == true {
+	auto := false
+	if group.Runtime.Auto != nil {
+		auto = *group.Runtime.Auto
+	}
+	if auto {
 		if group.Runtime.SlopeStartAuto != nil {
 			slopeStart = *group.Runtime.SlopeStartAuto
 		}
@@ -402,7 +436,13 @@ func (s *Service) setpointLed(group *Group) {
 	}
 
 	for _, led := range group.Runtime.Leds {
-		s.sendLedGroupSetpoint(led, group.Setpoint, slopeStart, slopeStop)
+		_, ok := group.FirstDay[led]
+		setpoint := group.Setpoint
+		if auto && ok {
+			setpoint = group.FirstDaySetpoint
+			rlog.Info("Group " + strconv.Itoa(group.Runtime.Group) + " =>  leds FirstDaySetpoint: " + strconv.Itoa(group.FirstDaySetpoint))
+		}
+		s.sendLedGroupSetpoint(led, setpoint, slopeStart, slopeStop)
 	}
 }
 
@@ -423,9 +463,14 @@ func (s *Service) createGroup(runtime gm.GroupConfig) {
 		Scale:        10,
 		Sensors:      make(map[string]SensorEvent),
 		SensorsIssue: make(map[string]bool),
+		FirstDay:     make(map[string]bool),
 	}
 	for _, sensor := range runtime.Sensors {
 		group.Sensors[sensor] = SensorEvent{}
+	}
+
+	for _, led := range runtime.FirstDay {
+		group.FirstDay[led] = true
 	}
 	for _, sensor := range runtime.Sensors {
 		//to be sure of the state after a creation or a restart
@@ -509,6 +554,27 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 	}
 	if new.Leds != nil {
 		gr.Runtime.Leds = new.Leds
+	}
+	if new.FirstDay != nil {
+		gr.Runtime.FirstDay = new.FirstDay
+		seen := make(map[string]bool)
+		for _, led := range new.FirstDay {
+			_, ok := gr.FirstDay[led]
+			if !ok {
+				gr.FirstDay[led] = true
+			}
+			seen[led] = true
+		}
+		for mac := range gr.FirstDay {
+			_, ok := seen[mac]
+			if !ok {
+				delete(gr.FirstDay, mac)
+			}
+		}
+
+	}
+	if new.FirstDayOffset != nil {
+		gr.Runtime.FirstDayOffset = new.FirstDayOffset
 	}
 	if new.Blinds != nil {
 		gr.Runtime.Blinds = new.Blinds
