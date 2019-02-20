@@ -242,6 +242,8 @@ func (s *Service) groupRun(group *Group) error {
 								s.setpointLed(group)
 								group.Counter = 0
 							}
+						} else {
+							s.setpointLed(group)
 						}
 					}
 				} else {
