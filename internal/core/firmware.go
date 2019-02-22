@@ -429,8 +429,8 @@ func (s *Service) Run() error {
 				case EventServerSetup:
 					s.isConfigured = true
 					s.friendlyName = event.FriendlyName
-					s.systemUpdate(event)
-					s.packagesInstall(event)
+					// s.systemUpdate(event)
+					// s.packagesInstall(event)
 					// s.updateConfiguration(event)
 
 				case EventServerRemove:
