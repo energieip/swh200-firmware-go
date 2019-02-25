@@ -116,10 +116,48 @@ func (s *Service) prepareSensorSetup(sensor ds.SensorSetup) {
 	}
 }
 
-func (s *Service) updateSensorConfig(sensor ds.SensorConf) {
-	_, ok := s.sensors[sensor.Mac]
+func (s *Service) updateSensorConfig(cfg ds.SensorConf) {
+	setup, dbID := s.getSensorConfig(cfg.Mac)
+	if setup == nil || dbID == "" {
+		return
+	}
+
+	if cfg.BrightnessCorrectionFactor != nil {
+		setup.BrightnessCorrectionFactor = cfg.BrightnessCorrectionFactor
+	}
+
+	if cfg.FriendlyName != nil {
+		setup.FriendlyName = cfg.FriendlyName
+	}
+
+	if cfg.Group != nil {
+		setup.Group = cfg.Group
+	}
+
+	if cfg.IsBleEnabled != nil {
+		setup.IsBleEnabled = cfg.IsBleEnabled
+	}
+
+	if cfg.TemperatureOffset != nil {
+		setup.TemperatureOffset = cfg.TemperatureOffset
+	}
+
+	if cfg.ThresholdPresence != nil {
+		setup.ThresholdPresence = cfg.ThresholdPresence
+	}
+
+	if cfg.DumpFrequency != nil {
+		setup.DumpFrequency = *cfg.DumpFrequency
+	}
+
+	err := s.db.UpdateRecord(ds.DbConfig, ds.TableName, dbID, setup)
+	if err != nil {
+		rlog.Error("Error updating database" + err.Error())
+		return
+	}
+	_, ok := s.sensors[cfg.Mac]
 	if ok {
-		s.sendSensorUpdate(sensor)
+		s.sendSensorUpdate(cfg)
 	}
 }
 
@@ -207,4 +245,24 @@ func (s *Service) sendInvalidStatus(sensor ds.Sensor) {
 
 	s.clusterSendCommand(url, dump)
 	s.localSendCommand(url, dump)
+}
+
+func (s *Service) getSensorConfig(mac string) (*ds.SensorSetup, string) {
+	var dbID string
+	criteria := make(map[string]interface{})
+	criteria["Mac"] = mac
+	stored, err := s.db.GetRecord(ds.DbConfig, ds.TableName, criteria)
+	if err != nil || stored == nil {
+		return nil, dbID
+	}
+	m := stored.(map[string]interface{})
+	id, ok := m["id"]
+	if ok {
+		dbID = id.(string)
+	}
+	driver, err := ds.ToSensorSetup(stored)
+	if err != nil {
+		return nil, dbID
+	}
+	return driver, dbID
 }

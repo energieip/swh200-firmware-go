@@ -140,10 +140,48 @@ func (s *Service) prepareLedSetup(led dl.LedSetup) {
 	}
 }
 
-func (s *Service) updateLedConfig(led dl.LedConf) {
-	_, ok := s.leds[led.Mac]
+func (s *Service) updateLedConfig(config dl.LedConf) {
+	setup, dbID := s.getLedConfig(config.Mac)
+	if setup == nil || dbID == "" {
+		return
+	}
+
+	if config.ThresholdHigh != nil {
+		setup.ThresholdHigh = config.ThresholdHigh
+	}
+
+	if config.ThresholdLow != nil {
+		setup.ThresholdLow = config.ThresholdLow
+	}
+
+	if config.FriendlyName != nil {
+		setup.FriendlyName = config.FriendlyName
+	}
+
+	if config.Group != nil {
+		setup.Group = config.Group
+	}
+
+	if config.IsBleEnabled != nil {
+		setup.IsBleEnabled = config.IsBleEnabled
+	}
+
+	if config.DumpFrequency != nil {
+		setup.DumpFrequency = *config.DumpFrequency
+	}
+
+	if config.Watchdog != nil {
+		setup.Watchdog = config.Watchdog
+	}
+
+	err := s.db.UpdateRecord(dl.DbConfig, dl.TableName, dbID, setup)
+	if err != nil {
+		rlog.Error("Error updating database " + err.Error())
+		return
+	}
+	_, ok := s.leds[config.Mac]
 	if ok {
-		s.sendLedUpdate(led)
+		s.sendLedUpdate(config)
 	}
 }
 
@@ -227,4 +265,24 @@ func (s *Service) cronLedMode() {
 			}
 		}
 	}
+}
+
+func (s *Service) getLedConfig(mac string) (*dl.LedSetup, string) {
+	var dbID string
+	criteria := make(map[string]interface{})
+	criteria["Mac"] = mac
+	stored, err := s.db.GetRecord(dl.DbConfig, dl.TableName, criteria)
+	if err != nil || stored == nil {
+		return nil, dbID
+	}
+	m := stored.(map[string]interface{})
+	id, ok := m["id"]
+	if ok {
+		dbID = id.(string)
+	}
+	driver, err := dl.ToLedSetup(stored)
+	if err != nil {
+		return nil, dbID
+	}
+	return driver, dbID
 }

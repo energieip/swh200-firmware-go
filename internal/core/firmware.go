@@ -438,7 +438,7 @@ func (s *Service) Run() error {
 						//a reset is performed
 						continue
 					}
-					s.packagesRemove(event)
+					// s.packagesRemove(event)
 					s.removeConfiguration(event)
 				}
 			}

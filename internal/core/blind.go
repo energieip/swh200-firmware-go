@@ -101,10 +101,36 @@ func (s *Service) prepareBlindSetup(driver dblind.BlindSetup) {
 	}
 }
 
-func (s *Service) updateBlindConfig(driver dblind.BlindConf) {
-	_, ok := s.blinds[driver.Mac]
+func (s *Service) updateBlindConfig(cfg dblind.BlindConf) {
+	setup, dbID := s.getBlindConfig(cfg.Mac)
+	if setup == nil || dbID == "" {
+		return
+	}
+
+	if cfg.FriendlyName != nil {
+		setup.FriendlyName = cfg.FriendlyName
+	}
+
+	if cfg.Group != nil {
+		setup.Group = cfg.Group
+	}
+
+	if cfg.IsBleEnabled != nil {
+		setup.IsBleEnabled = cfg.IsBleEnabled
+	}
+
+	if cfg.DumpFrequency != nil {
+		setup.DumpFrequency = *cfg.DumpFrequency
+	}
+
+	err := s.db.UpdateRecord(dblind.DbConfig, dblind.TableName, dbID, setup)
+	if err != nil {
+		rlog.Error("Cannot update database" + err.Error())
+		return
+	}
+	_, ok := s.blinds[cfg.Mac]
 	if ok {
-		s.sendBlindUpdate(driver)
+		s.sendBlindUpdate(cfg)
 	}
 }
 
@@ -151,4 +177,24 @@ func (s *Service) onBlindStatus(client network.Client, msg network.Message) {
 	if err != nil {
 		rlog.Error("Error during database update ", err.Error())
 	}
+}
+
+func (s *Service) getBlindConfig(mac string) (*dblind.BlindSetup, string) {
+	var dbID string
+	criteria := make(map[string]interface{})
+	criteria["Mac"] = mac
+	stored, err := s.db.GetRecord(dblind.DbConfig, dblind.TableName, criteria)
+	if err != nil || stored == nil {
+		return nil, dbID
+	}
+	m := stored.(map[string]interface{})
+	id, ok := m["id"]
+	if ok {
+		dbID = id.(string)
+	}
+	driver, err := dblind.ToBlindSetup(stored)
+	if err != nil {
+		return nil, dbID
+	}
+	return driver, dbID
 }
