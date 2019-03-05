@@ -219,9 +219,11 @@ func (s *Service) groupRun(group *Group) error {
 					}
 				}
 
+				//force to compute presence to be sure that the status is consistent even if the group was is manual mode
+				s.computePresence(group)
+
 				//force re-check mode due to the switch back manual to auto mode
 				if !s.isManualMode(group) {
-					s.computePresence(group)
 					s.computeBrightness(group)
 					if group.Presence != group.LastPresenceStatus {
 						if !group.Presence {
@@ -243,6 +245,11 @@ func (s *Service) groupRun(group *Group) error {
 								group.Counter = 0
 							}
 						} else {
+							if group.Runtime.CorrectionInterval == nil || group.Counter >= *group.Runtime.CorrectionInterval {
+								group.Setpoint = 0
+								group.FirstDaySetpoint = 0
+								group.Counter = 0
+							}
 							s.setpointLed(group)
 						}
 					}
