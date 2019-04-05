@@ -14,7 +14,6 @@ import (
 type API struct {
 	db          database.Database
 	apiMutex    sync.Mutex
-	installMode *bool
 	certificate string
 	keyfile     string
 }
@@ -66,7 +65,10 @@ func (api *API) getFunctions(w http.ResponseWriter, req *http.Request) {
 func (api *API) getV1Functions(w http.ResponseWriter, req *http.Request) {
 	api.setDefaultHeader(w)
 	apiV1 := "/v1.0"
-	functions := []string{apiV1 + "/status/consumptions"}
+	functions := []string{apiV1 + "/status/consumptions",
+		apiV1 + "/status/consumption/leds",
+		apiV1 + "/status/consumption/blinds",
+		apiV1 + "/status/consumption/hvacs"}
 	apiInfo := APIFunctions{
 		Functions: functions,
 	}
@@ -74,11 +76,60 @@ func (api *API) getV1Functions(w http.ResponseWriter, req *http.Request) {
 	w.Write(inrec)
 }
 
-type APIV1Consumptions struct {
-	Power int `json:"power"`
+type APIV1SwitchConsumptions struct {
+	TotalPower    int `json:"totalPower"`
+	LightingPower int `json:"lightningPower"`
+	BlindPower    int `json:"blindPower"`
+	HvacPower     int `json:"hvacPower"`
 }
 
 func (api *API) getV1Consumptions(w http.ResponseWriter, req *http.Request) {
+	api.setDefaultHeader(w)
+	power := 0
+	leds := 0
+	blinds := 0
+	hvacs := 0
+
+	for _, driver := range database.GetStatusBlinds(api.db) {
+		power += driver.LinePower
+		blinds += driver.LinePower
+	}
+
+	for _, driver := range database.GetStatusLeds(api.db) {
+		power += driver.LinePower
+		leds += driver.LinePower
+	}
+
+	conso := APIV1SwitchConsumptions{
+		TotalPower:    power,
+		LightingPower: leds,
+		BlindPower:    blinds,
+		HvacPower:     hvacs,
+	}
+	inrec, _ := json.MarshalIndent(conso, "", "  ")
+	w.Write(inrec)
+}
+
+type APIV1Consumption struct {
+	Power int `json:"power"`
+}
+
+func (api *API) getV1LightingConsumptions(w http.ResponseWriter, req *http.Request) {
+	api.setDefaultHeader(w)
+	power := 0
+
+	for _, driver := range database.GetStatusLeds(api.db) {
+		power += driver.LinePower
+	}
+
+	conso := APIV1Consumption{
+		Power: power,
+	}
+	inrec, _ := json.MarshalIndent(conso, "", "  ")
+	w.Write(inrec)
+}
+
+func (api *API) getV1BlindConsumptions(w http.ResponseWriter, req *http.Request) {
 	api.setDefaultHeader(w)
 	power := 0
 
@@ -86,11 +137,18 @@ func (api *API) getV1Consumptions(w http.ResponseWriter, req *http.Request) {
 		power += driver.LinePower
 	}
 
-	for _, driver := range database.GetStatusLeds(api.db) {
-		power += driver.LinePower
+	conso := APIV1Consumption{
+		Power: power,
 	}
+	inrec, _ := json.MarshalIndent(conso, "", "  ")
+	w.Write(inrec)
+}
 
-	conso := APIV1Consumptions{
+func (api *API) getV1HVACConsumptions(w http.ResponseWriter, req *http.Request) {
+	api.setDefaultHeader(w)
+	power := 0
+
+	conso := APIV1Consumption{
 		Power: power,
 	}
 	inrec, _ := json.MarshalIndent(conso, "", "  ")
@@ -108,6 +166,9 @@ func (api *API) swagger() {
 
 	//status
 	router.HandleFunc(apiV1+"/status/consumptions", api.getV1Consumptions).Methods("GET")
+	router.HandleFunc(apiV1+"/status/consumption/leds", api.getV1LightingConsumptions).Methods("GET")
+	router.HandleFunc(apiV1+"/status/consumption/blinds", api.getV1BlindConsumptions).Methods("GET")
+	router.HandleFunc(apiV1+"/status/consumption/hvacs", api.getV1HVACConsumptions).Methods("GET")
 
 	//unversionned API
 	router.HandleFunc("/versions", api.getAPIs).Methods("GET")
