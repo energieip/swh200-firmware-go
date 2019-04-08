@@ -166,6 +166,42 @@ func (s *Service) updateLedConfig(config dl.LedConf) {
 		setup.IsBleEnabled = config.IsBleEnabled
 	}
 
+	if config.SlopeStartAuto != nil {
+		setup.SlopeStartAuto = config.SlopeStartAuto
+	}
+
+	if config.SlopeStartManual != nil {
+		setup.SlopeStartManual = config.SlopeStartManual
+	}
+
+	if config.SlopeStopAuto != nil {
+		setup.SlopeStopAuto = config.SlopeStopAuto
+	}
+
+	if config.SlopeStopManual != nil {
+		setup.SlopeStopManual = config.SlopeStopManual
+	}
+
+	if config.BleMode != nil {
+		setup.BleMode = config.BleMode
+	}
+
+	if config.IBeaconMajor != nil {
+		setup.IBeaconMajor = config.IBeaconMajor
+	}
+
+	if config.IBeaconMinor != nil {
+		setup.IBeaconMinor = config.IBeaconMinor
+	}
+
+	if config.IBeaconTxPower != nil {
+		setup.IBeaconTxPower = config.IBeaconTxPower
+	}
+
+	if config.IBeaconUUID != nil {
+		setup.IBeaconUUID = config.IBeaconUUID
+	}
+
 	if config.DumpFrequency != nil {
 		setup.DumpFrequency = *config.DumpFrequency
 	}
