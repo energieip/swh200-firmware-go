@@ -1,7 +1,6 @@
 package core
 
 import (
-	"encoding/hex"
 	"encoding/json"
 	"time"
 
@@ -14,13 +13,6 @@ import (
 func (s *Service) sendLedSetup(led dl.LedSetup) {
 	url := "/write/led/" + led.Mac + "/" + dl.UrlSetup
 	dump, _ := led.ToJSON()
-	if led.IBeaconUUID != nil {
-		bs, err := hex.DecodeString(*led.IBeaconUUID)
-		if err == nil {
-			convertUUID := string(bs)
-			led.IBeaconUUID = &convertUUID
-		}
-	}
 	s.localSendCommand(url, dump)
 	if led.Auto != nil {
 		if *led.Auto == false {
