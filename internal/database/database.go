@@ -4,6 +4,7 @@ import (
 	"github.com/energieip/common-components-go/pkg/database"
 	"github.com/energieip/common-components-go/pkg/dblind"
 	gm "github.com/energieip/common-components-go/pkg/dgroup"
+	"github.com/energieip/common-components-go/pkg/dhvac"
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
 	sd "github.com/energieip/common-components-go/pkg/dswitch"
@@ -48,11 +49,13 @@ func ConnectDatabase(ip, port string) (Database, error) {
 			tableCfg[gm.TableStatusName] = gm.GroupConfig{}
 			tableCfg[dblind.TableName] = dblind.BlindSetup{}
 			tableCfg[TableCluster] = pkg.Broker{}
+			tableCfg[dhvac.TableName] = dhvac.HvacSetup{}
 		} else {
 			tableCfg[dl.TableName] = dl.Led{}
 			tableCfg[ds.TableName] = ds.Sensor{}
 			tableCfg[gm.TableStatusName] = gm.GroupStatus{}
 			tableCfg[dblind.TableName] = dblind.Blind{}
+			tableCfg[dhvac.TableName] = dhvac.Hvac{}
 		}
 		for tableName, objs := range tableCfg {
 			err = db.CreateTable(dbName, tableName, &objs)
@@ -80,12 +83,14 @@ func ResetDB(db Database) error {
 			tableCfg[ds.TableName] = ds.SensorSetup{}
 			tableCfg[gm.TableStatusName] = gm.GroupConfig{}
 			tableCfg[dblind.TableName] = dblind.BlindSetup{}
+			tableCfg[dhvac.TableName] = dhvac.HvacSetup{}
 			tableCfg[TableCluster] = sd.SwitchCluster{}
 		} else {
 			tableCfg[dl.TableName] = dl.Led{}
 			tableCfg[ds.TableName] = ds.Sensor{}
 			tableCfg[gm.TableStatusName] = gm.GroupStatus{}
 			tableCfg[dblind.TableName] = dblind.Blind{}
+			tableCfg[dhvac.TableName] = dhvac.Hvac{}
 		}
 		for tableName, objs := range tableCfg {
 			err = db.DropTable(dbName, tableName)
@@ -181,6 +186,22 @@ func GetStatusBlinds(db Database) map[string]dblind.Blind {
 	return drivers
 }
 
+func GetStatusHvacs(db Database) map[string]dhvac.Hvac {
+	drivers := make(map[string]dhvac.Hvac)
+	stored, err := db.FetchAllRecords(dhvac.DbStatus, dhvac.TableName)
+	if err != nil || stored == nil {
+		return drivers
+	}
+	for _, v := range stored {
+		driver, err := dhvac.ToHvac(v)
+		if err != nil {
+			continue
+		}
+		drivers[driver.Mac] = *driver
+	}
+	return drivers
+}
+
 func GetConfigLed(db Database, mac string) *dl.LedSetup {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
@@ -203,6 +224,20 @@ func GetConfigBlind(db Database, mac string) *dblind.BlindSetup {
 		return nil
 	}
 	driver, err := dblind.ToBlindSetup(stored)
+	if err != nil {
+		return nil
+	}
+	return driver
+}
+
+func GetConfigHvac(db Database, mac string) *dhvac.HvacSetup {
+	criteria := make(map[string]interface{})
+	criteria["Mac"] = mac
+	stored, err := db.GetRecord(dhvac.DbConfig, dhvac.TableName, criteria)
+	if err != nil || stored == nil {
+		return nil
+	}
+	driver, err := dhvac.ToHvacSetup(stored)
 	if err != nil {
 		return nil
 	}
@@ -341,4 +376,10 @@ func RemoveBlindStatus(db Database, mac string) error {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
 	return db.DeleteRecord(dblind.DbStatus, dblind.TableName, criteria)
+}
+
+func RemoveHvacStatus(db Database, mac string) error {
+	criteria := make(map[string]interface{})
+	criteria["Mac"] = mac
+	return db.DeleteRecord(dhvac.DbStatus, dhvac.TableName, criteria)
 }

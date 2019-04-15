@@ -1,5 +1,5 @@
 hash: d411425b4f9db07589085d22323989d1ba481bfb0dd3cddbcc5288ab094b4b65
-updated: 2019-04-08T17:52:29.320297211+02:00
+updated: 2019-04-15T15:23:29.879673502+02:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 1e4cf3da559842a91afcb6ea6141451e6c30c618
@@ -8,11 +8,12 @@ imports:
   subpackages:
   - packets
 - name: github.com/energieip/common-components-go
-  version: 999e98fae6252393fc732374b3db00db75bd46e8
+  version: ce72891e2161acc467cf73f7fc30abe36fdc9f0b
   subpackages:
   - pkg/database
   - pkg/dblind
   - pkg/dgroup
+  - pkg/dhvac
   - pkg/dled
   - pkg/dsensor
   - pkg/dswitch
@@ -20,7 +21,7 @@ imports:
   - pkg/service
   - pkg/tools
 - name: github.com/golang/protobuf
-  version: d3c38a4eb4970272b87a425ae00ccc4548e2f9bb
+  version: e91709a02e0e8ff8b86b7aa913fdc9ae9498e825
   subpackages:
   - proto
 - name: github.com/gorilla/mux
@@ -39,18 +40,18 @@ imports:
 - name: github.com/sirupsen/logrus
   version: 9b3cdde74fbe9443d704467498a7dcb61a79de9b
 - name: golang.org/x/crypto
-  version: 38d8ce5564a5b71b2e3a00553993f1b9a7ae852f
+  version: 88737f569e3a9c7ab309cdc09a07fe7fc87233c3
   subpackages:
   - pbkdf2
 - name: golang.org/x/net
-  version: eb5bcb51f2a31c7d5141d810b70815c05d9c9146
+  version: 4a65cf94b67935be46fbc55ddaea48ae3f7a1471
   subpackages:
   - context
   - internal/socks
   - proxy
   - websocket
 - name: golang.org/x/sys
-  version: 4b34438f7a67ee5f45cc6132e2bad873a20324e9
+  version: 16da32be82c5df9a338c27758247c0b7b0bd8fea
   subpackages:
   - unix
 - name: gopkg.in/fatih/pool.v2

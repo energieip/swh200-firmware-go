@@ -10,6 +10,7 @@ import (
 	"github.com/energieip/swh200-firmware-go/internal/database"
 
 	"github.com/energieip/common-components-go/pkg/dblind"
+	"github.com/energieip/common-components-go/pkg/dhvac"
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
 	sd "github.com/energieip/common-components-go/pkg/dswitch"
@@ -49,6 +50,7 @@ type Service struct {
 	sensors               map[string]ds.Sensor
 	groups                map[int]Group
 	blinds                map[string]dblind.Blind
+	hvacs                 map[string]dhvac.Hvac
 	conf                  pkg.ServiceConfig
 	clientID              string
 	driversSeen           map[string]time.Time
@@ -64,6 +66,7 @@ func (s *Service) Initialize(confFile string) error {
 	s.ledsToAuto = make(map[string]*int)
 	s.sensors = make(map[string]ds.Sensor)
 	s.blinds = make(map[string]dblind.Blind)
+	s.hvacs = make(map[string]dhvac.Hvac)
 	s.groups = make(map[int]Group)
 	s.cluster = make(map[string]ClusterNetwork)
 	s.driversSeen = make(map[string]time.Time)
@@ -203,10 +206,12 @@ func (s *Service) sendDump() {
 	leds := database.GetStatusLeds(s.db)
 	sensors := database.GetStatusSensors(s.db)
 	blinds := database.GetStatusBlinds(s.db)
+	hvacs := database.GetStatusHvacs(s.db)
 
 	dumpSensors := make(map[string]ds.Sensor)
 	dumpLeds := make(map[string]dl.Led)
 	dumpBlinds := make(map[string]dblind.Blind)
+	dumpHvacs := make(map[string]dhvac.Hvac)
 	for _, driver := range leds {
 		val, ok := s.driversSeen[driver.Mac]
 		if ok {
@@ -262,6 +267,23 @@ func (s *Service) sendDump() {
 		}
 	}
 	status.Blinds = dumpBlinds
+
+	for _, driver := range hvacs {
+		val, ok := s.driversSeen[driver.Mac]
+		if ok {
+			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
+			if timeNow.Sub(val) <= maxDuration {
+				dumpHvacs[driver.Mac] = driver
+				continue
+			} else {
+				rlog.Warn("HVAC " + driver.Mac + " no longer seen; drop it")
+				delete(s.hvacs, driver.Mac)
+				delete(s.driversSeen, driver.Mac)
+				database.RemoveHvacStatus(s.db, driver.Mac)
+			}
+		}
+	}
+	status.Hvacs = dumpHvacs
 	status.Groups = database.GetStatusGroup(s.db)
 
 	dump, _ := status.ToJSON()
@@ -291,6 +313,14 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 
 	for _, blind := range switchConfig.BlindsConfig {
 		s.updateBlindConfig(blind)
+	}
+
+	for _, hvac := range switchConfig.HvacsSetup {
+		s.prepareHvacSetup(hvac)
+	}
+
+	for _, hvac := range switchConfig.HvacsConfig {
+		s.updateHvacConfig(hvac)
 	}
 
 	for grID, group := range switchConfig.Groups {
@@ -335,6 +365,10 @@ func (s *Service) removeConfiguration(switchConfig sd.SwitchConfig) {
 
 	for blindMac := range switchConfig.BlindsConfig {
 		s.removeBlind(blindMac)
+	}
+
+	for hvacMac := range switchConfig.HvacsConfig {
+		s.removeHvac(hvacMac)
 	}
 
 	for mac := range switchConfig.ClusterBroker {
@@ -411,6 +445,7 @@ func (s *Service) Run() error {
 							s.ledsToAuto = make(map[string]*int)
 							s.sensors = make(map[string]ds.Sensor)
 							s.blinds = make(map[string]dblind.Blind)
+							s.hvacs = make(map[string]dhvac.Hvac)
 							s.groups = make(map[int]Group)
 							for mac := range s.cluster {
 								s.removeClusterMember(mac)
