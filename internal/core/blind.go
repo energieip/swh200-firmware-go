@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"strconv"
 	"time"
 
 	"github.com/energieip/common-components-go/pkg/dblind"
@@ -9,6 +10,56 @@ import (
 	"github.com/energieip/swh200-firmware-go/internal/database"
 	"github.com/romana/rlog"
 )
+
+type BlindEvent struct {
+	Mac           string `json:"mac"`
+	WindowStatus1 bool   `json:"windowStatus1"`
+	WindowStatus2 bool   `json:"windowStatus2"`
+}
+
+type BlindErrorEvent struct {
+	Mac string `json:"mac"`
+}
+
+//ToJSON dump struct in json
+func (driver BlindErrorEvent) ToJSON() (string, error) {
+	inrec, err := json.Marshal(driver)
+	if err != nil {
+		return "", err
+	}
+	return string(inrec[:]), err
+}
+
+//ToBlindErrorEvent convert interface to Blind object
+func ToBlindErrorEvent(val interface{}) (*BlindErrorEvent, error) {
+	var driver BlindErrorEvent
+	inrec, err := json.Marshal(val)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(inrec, &driver)
+	return &driver, err
+}
+
+//ToJSON dump struct in json
+func (driver BlindEvent) ToJSON() (string, error) {
+	inrec, err := json.Marshal(driver)
+	if err != nil {
+		return "", err
+	}
+	return string(inrec[:]), err
+}
+
+//ToBlindEvent convert interface to Blind object
+func ToBlindEvent(val interface{}) (*BlindEvent, error) {
+	var driver BlindEvent
+	inrec, err := json.Marshal(val)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(inrec, &driver)
+	return &driver, err
+}
 
 func (s *Service) sendBlindSetup(driver dblind.BlindSetup) {
 	url := "/write/blind/" + driver.Mac + "/" + dblind.UrlSetup
@@ -162,6 +213,17 @@ func (s *Service) onBlindHello(client network.Client, msg network.Message) {
 	}
 }
 
+func (s *Service) sendInvalidBlindStatus(driver dblind.Blind) {
+	url := "/read/group/" + strconv.Itoa(driver.Group) + "/error/blind"
+	evt := BlindErrorEvent{
+		Mac: driver.Mac,
+	}
+	dump, _ := evt.ToJSON()
+
+	s.clusterSendCommand(url, dump)
+	s.localSendCommand(url, dump)
+}
+
 func (s *Service) onBlindStatus(client network.Client, msg network.Message) {
 	topic := msg.Topic()
 	rlog.Debug(topic + " : " + string(msg.Payload()))
@@ -176,6 +238,19 @@ func (s *Service) onBlindStatus(client network.Client, msg network.Message) {
 	err = s.updateBlindStatus(driver)
 	if err != nil {
 		rlog.Error("Error during database update ", err.Error())
+	}
+	if driver.Error == 0 {
+		url := "/read/group/" + strconv.Itoa(driver.Group) + "/events/blind"
+		evt := BlindEvent{
+			Mac:           driver.Mac,
+			WindowStatus1: driver.WindowStatus1,
+			WindowStatus2: driver.WindowStatus2,
+		}
+		dump, _ := evt.ToJSON()
+		s.clusterSendCommand(url, dump)
+		s.localSendCommand(url, dump)
+	} else {
+		s.sendInvalidBlindStatus(driver)
 	}
 }
 

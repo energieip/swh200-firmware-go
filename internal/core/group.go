@@ -38,6 +38,8 @@ type Group struct {
 	Error              int
 	Sensors            map[string]SensorEvent
 	SensorsIssue       map[string]bool
+	Blinds             map[string]BlindEvent
+	BlindsIssue        map[string]bool
 	FirstDay           map[string]bool
 	SetpointBlinds     *int
 	SetpointSlatBlinds *int
@@ -72,7 +74,35 @@ func (s *Service) onGroupSensorEvent(client network.Client, msg network.Message)
 		//sensor no longer problematic
 		delete(group.SensorsIssue, sensor.Mac)
 	}
+}
 
+func (s *Service) onGroupBlindEvent(client network.Client, msg network.Message) {
+	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
+	sGrID := strings.Split(msg.Topic(), "/")[3]
+	grID, err := strconv.Atoi(sGrID)
+	if err != nil {
+		return
+	}
+
+	group, ok := s.groups[grID]
+	if !ok {
+		rlog.Debug("Skip group")
+		return
+	}
+
+	var blind BlindEvent
+	err = json.Unmarshal(msg.Payload(), &blind)
+	if err != nil {
+		rlog.Error("Error during parsing", err.Error())
+		return
+	}
+
+	group.Blinds[blind.Mac] = blind
+	_, ok = group.BlindsIssue[blind.Mac]
+	if ok {
+		//blind no longer problematic
+		delete(group.BlindsIssue, blind.Mac)
+	}
 }
 
 func (s *Service) onGroupErrorEvent(client network.Client, msg network.Message) {
@@ -97,6 +127,30 @@ func (s *Service) onGroupErrorEvent(client network.Client, msg network.Message) 
 	}
 
 	group.SensorsIssue[sensor.Mac] = true
+}
+
+func (s *Service) onGroupBlindErrorEvent(client network.Client, msg network.Message) {
+	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
+	sGrID := strings.Split(msg.Topic(), "/")[3]
+	grID, err := strconv.Atoi(sGrID)
+	if err != nil {
+		return
+	}
+
+	group, ok := s.groups[grID]
+	if !ok {
+		rlog.Debug("Skip group")
+		return
+	}
+
+	var blind BlindErrorEvent
+	err = json.Unmarshal(msg.Payload(), &blind)
+	if err != nil {
+		rlog.Error("Error during parsing", err.Error())
+		return
+	}
+
+	group.BlindsIssue[blind.Mac] = true
 }
 
 func (s *Service) dumpGroupStatus(group Group) error {
@@ -473,10 +527,16 @@ func (s *Service) createGroup(runtime gm.GroupConfig) {
 		Scale:        10,
 		Sensors:      make(map[string]SensorEvent),
 		SensorsIssue: make(map[string]bool),
+		Blinds:       make(map[string]BlindEvent),
+		BlindsIssue:  make(map[string]bool),
 		FirstDay:     make(map[string]bool),
 	}
 	for _, sensor := range runtime.Sensors {
 		group.Sensors[sensor] = SensorEvent{}
+	}
+
+	for _, blind := range runtime.Blinds {
+		group.Blinds[blind] = BlindEvent{}
 	}
 
 	for _, led := range runtime.FirstDay {
@@ -485,6 +545,10 @@ func (s *Service) createGroup(runtime gm.GroupConfig) {
 	for _, sensor := range runtime.Sensors {
 		//to be sure of the state after a creation or a restart
 		group.SensorsIssue[sensor] = true
+	}
+	for _, blind := range runtime.Blinds {
+		//to be sure of the state after a creation or a restart
+		group.BlindsIssue[blind] = true
 	}
 	s.groups[runtime.Group] = group
 	s.groupRun(&group)
@@ -586,8 +650,29 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 	if new.FirstDayOffset != nil {
 		gr.Runtime.FirstDayOffset = new.FirstDayOffset
 	}
+
 	if new.Blinds != nil {
 		gr.Runtime.Blinds = new.Blinds
+		seen := make(map[string]bool)
+		for _, blind := range new.Blinds {
+			_, ok := gr.Blinds[blind]
+			if !ok {
+				gr.Blinds[blind] = BlindEvent{}
+			}
+			seen[blind] = true
+			// do not take in to consideration until we received valid information from the blind
+			gr.BlindsIssue[blind] = true
+		}
+		for mac := range gr.Blinds {
+			_, ok := seen[mac]
+			if !ok {
+				delete(gr.Blinds, mac)
+				_, ok := gr.BlindsIssue[mac]
+				if ok {
+					delete(gr.BlindsIssue, mac)
+				}
+			}
+		}
 	}
 	if new.Hvacs != nil {
 		gr.Runtime.Hvacs = new.Hvacs
