@@ -30,6 +30,7 @@ type Group struct {
 	FirstDaySetpoint   int
 	Brightness         int
 	Presence           bool
+	Opened             bool
 	Slope              int
 	TimeToAuto         int
 	Scale              int    //brightness correction scale
@@ -199,6 +200,7 @@ func (s *Service) dumpGroupStatus(group Group) error {
 		SensorRule:           sensorRule,
 		Error:                group.Error,
 		Presence:             group.Presence,
+		WindowsOpened:        group.Opened,
 		TimeToLeave:          group.PresenceTimeout,
 		CorrectionInterval:   correctionInterval,
 		SetpointLeds:         group.Setpoint,
@@ -276,6 +278,7 @@ func (s *Service) groupRun(group *Group) error {
 
 				//force to compute presence to be sure that the status is consistent even if the group was is manual mode
 				s.computePresence(group)
+				s.computeOpen(group)
 
 				//force re-check mode due to the switch back manual to auto mode
 				if !s.isManualMode(group) {
@@ -343,6 +346,31 @@ func (s *Service) isPresenceDetected(group *Group) bool {
 		}
 	}
 	return false
+}
+
+func (s *Service) hasWindowOpened(group *Group) bool {
+	for _, blind := range group.Blinds {
+		_, ok := group.BlindsIssue[blind.Mac]
+		if ok {
+			// do not take it to account a sensor with an issue
+			continue
+		}
+		if blind.WindowStatus1 || blind.WindowStatus2 {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *Service) computeOpen(group *Group) {
+	opened := s.hasWindowOpened(group)
+
+	if len(group.Blinds) == 0 {
+		//force status close when there is no blind in the group
+		group.Opened = false
+		return
+	}
+	group.Opened = opened
 }
 
 func (s *Service) computePresence(group *Group) {
