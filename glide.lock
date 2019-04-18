@@ -1,14 +1,14 @@
 hash: d411425b4f9db07589085d22323989d1ba481bfb0dd3cddbcc5288ab094b4b65
-updated: 2019-04-17T10:37:34.810670136+02:00
+updated: 2019-04-17T21:21:00.824996242+02:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 1e4cf3da559842a91afcb6ea6141451e6c30c618
 - name: github.com/eclipse/paho.mqtt.golang
-  version: 54767d4b481181b7ad634c825dbabbdaca11eaf5
+  version: 1c3a9d248e675495399d9d070b3708c53ef1068a
   subpackages:
   - packets
 - name: github.com/energieip/common-components-go
-  version: 9007967d85a02f8821503d8279552e096ab983d0
+  version: e1bf09530dc7213b5176e48037a4be77ea3e918b
   subpackages:
   - pkg/database
   - pkg/dblind
@@ -40,7 +40,7 @@ imports:
 - name: github.com/sirupsen/logrus
   version: 9b3cdde74fbe9443d704467498a7dcb61a79de9b
 - name: golang.org/x/crypto
-  version: 88737f569e3a9c7ab309cdc09a07fe7fc87233c3
+  version: f416ebab96af27ca70b6e5c23d6a0747530da626
   subpackages:
   - pbkdf2
 - name: golang.org/x/net
