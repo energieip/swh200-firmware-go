@@ -24,7 +24,7 @@ func (s *Service) sendHvacUpdate(driver dhvac.HvacConf) {
 }
 
 func (s *Service) sendHvacGroupSetpoint(mac string, temperatureOffset *int) {
-	_, ok := s.hvacs[mac]
+	_, ok := s.hvacs.Get(mac)
 	if !ok {
 		rlog.Warn("Hvac " + mac + " not plugged to this switch")
 		return
@@ -40,7 +40,7 @@ func (s *Service) removeHvac(mac string) {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
 	s.db.DeleteRecord(dhvac.DbConfig, dhvac.TableName, criteria)
-	_, ok := s.hvacs[mac]
+	_, ok := s.hvacs.Get(mac)
 	if !ok {
 		return
 	}
@@ -55,10 +55,13 @@ func (s *Service) removeHvac(mac string) {
 
 func (s *Service) updateHvacStatus(driver dhvac.Hvac) error {
 	var err error
-	val, ok := s.hvacs[driver.Mac]
-	if ok && val == driver {
-		//case no change
-		return nil
+	val, ok := s.hvacs.Get(driver.Mac)
+	if ok {
+		ref := val.(dhvac.Hvac)
+		if ref == driver {
+			//case no change
+			return nil
+		}
 	}
 
 	// Check if the serial already exist in database (case restart process)
@@ -71,7 +74,7 @@ func (s *Service) updateHvacStatus(driver dhvac.Hvac) error {
 		err = s.db.UpdateRecord(dhvac.DbStatus, dhvac.TableName, dbID, driver)
 	}
 	if err == nil {
-		s.hvacs[driver.Mac] = driver
+		s.hvacs.Set(driver.Mac, driver)
 	}
 	return err
 }
@@ -90,9 +93,12 @@ func (s *Service) prepareHvacSetup(driver dhvac.HvacSetup) {
 	if err != nil {
 		rlog.Error("Cannot update database", err.Error())
 	}
-	drv, ok := s.hvacs[driver.Mac]
-	if ok && !drv.IsConfigured {
-		s.sendHvacSetup(driver)
+	drv, ok := s.hvacs.Get(driver.Mac)
+	if ok {
+		driv := drv.(dhvac.Hvac)
+		if !driv.IsConfigured {
+			s.sendHvacSetup(driver)
+		}
 	}
 }
 
@@ -119,7 +125,7 @@ func (s *Service) updateHvacConfig(cfg dhvac.HvacConf) {
 		rlog.Error("Cannot update database" + err.Error())
 		return
 	}
-	_, ok := s.hvacs[cfg.Mac]
+	_, ok := s.hvacs.Get(cfg.Mac)
 	if ok {
 		s.sendHvacUpdate(cfg)
 	}

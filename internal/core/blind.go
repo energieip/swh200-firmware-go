@@ -74,7 +74,7 @@ func (s *Service) sendBlindUpdate(driver dblind.BlindConf) {
 }
 
 func (s *Service) sendBlindGroupSetpoint(mac string, blind *int, slat *int) {
-	_, ok := s.blinds[mac]
+	_, ok := s.blinds.Get(mac)
 	if !ok {
 		rlog.Warn("Blind " + mac + " not plugged to this switch")
 		return
@@ -97,7 +97,7 @@ func (s *Service) removeBlind(mac string) {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
 	s.db.DeleteRecord(dblind.DbConfig, dblind.TableName, criteria)
-	_, ok := s.blinds[mac]
+	_, ok := s.blinds.Get(mac)
 	if !ok {
 		return
 	}
@@ -112,7 +112,7 @@ func (s *Service) removeBlind(mac string) {
 
 func (s *Service) updateBlindStatus(driver dblind.Blind) error {
 	var err error
-	val, ok := s.blinds[driver.Mac]
+	val, ok := s.blinds.Get(driver.Mac)
 	if ok && val == driver {
 		//case no change
 		return nil
@@ -128,7 +128,7 @@ func (s *Service) updateBlindStatus(driver dblind.Blind) error {
 		err = s.db.UpdateRecord(dblind.DbStatus, dblind.TableName, dbID, driver)
 	}
 	if err == nil {
-		s.blinds[driver.Mac] = driver
+		s.blinds.Set(driver.Mac, driver)
 	}
 	return err
 }
@@ -147,9 +147,12 @@ func (s *Service) prepareBlindSetup(driver dblind.BlindSetup) {
 	if err != nil {
 		rlog.Error("Cannot update database", err.Error())
 	}
-	bld, ok := s.blinds[driver.Mac]
-	if ok && !bld.IsConfigured {
-		s.sendBlindSetup(driver)
+	bld, ok := s.blinds.Get(driver.Mac)
+	if ok {
+		blind := bld.(dblind.Blind)
+		if !blind.IsConfigured {
+			s.sendBlindSetup(driver)
+		}
 	}
 }
 
@@ -180,7 +183,7 @@ func (s *Service) updateBlindConfig(cfg dblind.BlindConf) {
 		rlog.Error("Cannot update database" + err.Error())
 		return
 	}
-	_, ok := s.blinds[cfg.Mac]
+	_, ok := s.blinds.Get(cfg.Mac)
 	if ok {
 		s.sendBlindUpdate(cfg)
 	}

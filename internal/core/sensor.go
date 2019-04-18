@@ -76,9 +76,12 @@ func (s *Service) sendSensorUpdate(sensor ds.SensorConf) {
 }
 
 func (s *Service) updateSensorStatus(sensor ds.Sensor) error {
-	val, ok := s.sensors[sensor.Mac]
-	if ok && val == sensor {
-		return nil
+	v, ok := s.sensors.Get(sensor.Mac)
+	if ok {
+		val := v.(ds.Sensor)
+		if val == sensor {
+			return nil
+		}
 	}
 
 	var err error
@@ -91,7 +94,7 @@ func (s *Service) updateSensorStatus(sensor ds.Sensor) error {
 		err = s.db.UpdateRecord(ds.DbStatus, ds.TableName, dbID, sensor)
 	}
 	if err == nil {
-		s.sensors[sensor.Mac] = sensor
+		s.sensors.Set(sensor.Mac, sensor)
 	}
 	return err
 }
@@ -110,10 +113,13 @@ func (s *Service) prepareSensorSetup(sensor ds.SensorSetup) {
 	if err != nil {
 		rlog.Error("Cannot update database", err.Error())
 	}
-	cell, ok := s.sensors[sensor.Mac]
-	if ok && !cell.IsConfigured {
-		//uncomment this is due to an issue on sensor side
-		// s.sendSensorSetup(sensor)
+	c, ok := s.sensors.Get(sensor.Mac)
+	if ok {
+		cell := c.(ds.Sensor)
+		if !cell.IsConfigured {
+			//uncomment this is due to an issue on sensor side
+			// s.sendSensorSetup(sensor)
+		}
 	}
 }
 
@@ -156,7 +162,7 @@ func (s *Service) updateSensorConfig(cfg ds.SensorConf) {
 		rlog.Error("Error updating database" + err.Error())
 		return
 	}
-	_, ok := s.sensors[cfg.Mac]
+	_, ok := s.sensors.Get(cfg.Mac)
 	if ok {
 		s.sendSensorUpdate(cfg)
 	}
@@ -166,7 +172,7 @@ func (s *Service) removeSensor(mac string) {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
 	s.db.DeleteRecord(ds.DbConfig, ds.TableName, criteria)
-	_, ok := s.sensors[mac]
+	_, ok := s.sensors.Get(mac)
 	if ok {
 		isConfigured := false
 		remove := ds.SensorConf{

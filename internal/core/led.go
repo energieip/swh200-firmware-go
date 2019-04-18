@@ -64,7 +64,7 @@ func (s *Service) sendLedUpdate(led dl.LedConf) {
 }
 
 func (s *Service) sendLedGroupSetpoint(mac string, setpoint int, slopeStart int, slopeStop int) {
-	_, ok := s.leds[mac]
+	_, ok := s.leds.Get(mac)
 	if !ok {
 		return
 	}
@@ -85,7 +85,7 @@ func (s *Service) removeLed(mac string) {
 	if ok {
 		delete(s.ledsToAuto, mac)
 	}
-	_, ok = s.leds[mac]
+	_, ok = s.leds.Get(mac)
 	if !ok {
 		return
 	}
@@ -100,7 +100,7 @@ func (s *Service) removeLed(mac string) {
 
 func (s *Service) updateLedStatus(led dl.Led) error {
 	var err error
-	val, ok := s.leds[led.Mac]
+	val, ok := s.leds.Get(led.Mac)
 	if ok && val == led {
 		//case no change
 		return nil
@@ -116,7 +116,7 @@ func (s *Service) updateLedStatus(led dl.Led) error {
 		err = s.db.UpdateRecord(dl.DbStatus, dl.TableName, dbID, led)
 	}
 	if err == nil {
-		s.leds[led.Mac] = led
+		s.leds.Set(led.Mac, led)
 	}
 	return err
 }
@@ -135,9 +135,12 @@ func (s *Service) prepareLedSetup(led dl.LedSetup) {
 	if err != nil {
 		rlog.Error("Cannot update database", err.Error())
 	}
-	light, ok := s.leds[led.Mac]
-	if ok && !light.IsConfigured {
-		s.sendLedSetup(led)
+	l, ok := s.leds.Get(led.Mac)
+	if ok {
+		light := l.(dl.Led)
+		if !light.IsConfigured {
+			s.sendLedSetup(led)
+		}
 	}
 }
 
@@ -216,7 +219,7 @@ func (s *Service) updateLedConfig(config dl.LedConf) {
 		rlog.Error("Error updating database " + err.Error())
 		return
 	}
-	_, ok := s.leds[config.Mac]
+	_, ok := s.leds.Get(config.Mac)
 	if ok {
 		s.sendLedUpdate(config)
 	}

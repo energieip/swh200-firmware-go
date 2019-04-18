@@ -46,12 +46,12 @@ type Service struct {
 	services              map[string]pkg.Service
 	lastSystemUpgradeDate string
 	friendlyName          string
-	leds                  map[string]dl.Led
+	leds                  cmap.ConcurrentMap
 	ledsToAuto            map[string]*int
-	sensors               map[string]ds.Sensor
+	sensors               cmap.ConcurrentMap
 	groups                map[int]Group
-	blinds                map[string]dblind.Blind
-	hvacs                 map[string]dhvac.Hvac
+	blinds                cmap.ConcurrentMap
+	hvacs                 cmap.ConcurrentMap
 	conf                  pkg.ServiceConfig
 	clientID              string
 	driversSeen           cmap.ConcurrentMap
@@ -63,11 +63,11 @@ func (s *Service) Initialize(confFile string) error {
 	hostname, _ := os.Hostname()
 	s.clientID = "Switch" + hostname
 	s.events = make(chan string)
-	s.leds = make(map[string]dl.Led)
+	s.leds = cmap.New()
 	s.ledsToAuto = make(map[string]*int)
-	s.sensors = make(map[string]ds.Sensor)
-	s.blinds = make(map[string]dblind.Blind)
-	s.hvacs = make(map[string]dhvac.Hvac)
+	s.sensors = cmap.New()
+	s.blinds = cmap.New()
+	s.hvacs = cmap.New()
 	s.groups = make(map[int]Group)
 	s.cluster = make(map[string]ClusterNetwork)
 	s.driversSeen = cmap.New()
@@ -222,7 +222,7 @@ func (s *Service) sendDump() {
 				continue
 			} else {
 				rlog.Warn("LED " + driver.Mac + " no longer seen; drop it")
-				delete(s.leds, driver.Mac)
+				s.leds.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
 				_, ok := s.ledsToAuto[driver.Mac]
 				if ok {
@@ -244,7 +244,7 @@ func (s *Service) sendDump() {
 			} else {
 				rlog.Warn("Sensor " + driver.Mac + " no longer seen; drop it")
 				s.sendInvalidStatus(driver)
-				delete(s.sensors, driver.Mac)
+				s.sensors.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
 				database.RemoveSensorStatus(s.db, driver.Mac)
 			}
@@ -261,7 +261,7 @@ func (s *Service) sendDump() {
 				continue
 			} else {
 				rlog.Warn("Blind " + driver.Mac + " no longer seen; drop it")
-				delete(s.blinds, driver.Mac)
+				s.blinds.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
 				database.RemoveBlindStatus(s.db, driver.Mac)
 			}
@@ -278,7 +278,7 @@ func (s *Service) sendDump() {
 				continue
 			} else {
 				rlog.Warn("HVAC " + driver.Mac + " no longer seen; drop it")
-				delete(s.hvacs, driver.Mac)
+				s.hvacs.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
 				database.RemoveHvacStatus(s.db, driver.Mac)
 			}
@@ -442,11 +442,11 @@ func (s *Service) Run() error {
 							for _, group := range s.groups {
 								s.deleteGroup(group.Runtime)
 							}
-							s.leds = make(map[string]dl.Led)
+							s.leds = cmap.New()
 							s.ledsToAuto = make(map[string]*int)
-							s.sensors = make(map[string]ds.Sensor)
-							s.blinds = make(map[string]dblind.Blind)
-							s.hvacs = make(map[string]dhvac.Hvac)
+							s.sensors = cmap.New()
+							s.blinds = cmap.New()
+							s.hvacs = cmap.New()
 							s.groups = make(map[int]Group)
 							for mac := range s.cluster {
 								s.removeClusterMember(mac)
