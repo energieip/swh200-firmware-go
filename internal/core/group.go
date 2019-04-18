@@ -46,6 +46,8 @@ type Group struct {
 	SetpointSlatBlinds *int
 	LastPresenceStatus bool
 	Counter            int
+	Temperature        int
+	Humidity           int
 }
 
 func (s *Service) onGroupSensorEvent(client network.Client, msg network.Message) {
@@ -208,6 +210,9 @@ func (s *Service) dumpGroupStatus(group Group) error {
 		SlopeStartManual:     slopeStartManual,
 		SlopeStopAuto:        slopeStopAuto,
 		SlopeStopManual:      slopeStopManual,
+		Brightness:           group.Brightness,
+		Temperature:          group.Temperature,
+		Humidity:             group.Humidity,
 		Leds:                 group.Runtime.Leds,
 		Blinds:               group.Runtime.Blinds,
 		Sensors:              group.Runtime.Sensors,
@@ -279,6 +284,7 @@ func (s *Service) groupRun(group *Group) error {
 				//force to compute presence to be sure that the status is consistent even if the group was is manual mode
 				s.computePresence(group)
 				s.computeOpen(group)
+				s.computeTemperatureAndHumidity(group)
 
 				//force re-check mode due to the switch back manual to auto mode
 				if !s.isManualMode(group) {
@@ -486,6 +492,63 @@ func (s *Service) computeBrightness(group *Group) {
 		case gm.SensorMin:
 			if group.Brightness > sensor.Brightness {
 				group.Brightness = sensor.Brightness
+			}
+		}
+	}
+}
+
+func (s *Service) computeTemperatureAndHumidity(group *Group) {
+	//compute sensor values
+	refMac := ""
+	for mac := range group.Sensors {
+		_, ok := group.SensorsIssue[mac]
+		if ok {
+			// do not take it to account a sensor with an issue
+			continue
+		}
+		refMac = mac
+		break
+	}
+	if refMac == "" {
+		//No sensors in this group
+		return
+	}
+	nbValidSensors := len(group.Sensors) - len(group.SensorsIssue)
+	if nbValidSensors <= 0 {
+		//no valid sensor found
+		return
+	}
+
+	group.Temperature = group.Sensors[refMac].Temperature / nbValidSensors
+	group.Humidity = group.Sensors[refMac].Humidity / nbValidSensors
+
+	sensorRule := gm.SensorAverage
+	if group.Runtime.SensorRule != nil {
+		sensorRule = *group.Runtime.SensorRule
+	}
+
+	for mac, sensor := range group.Sensors {
+		if mac == refMac {
+			continue
+		}
+
+		_, ok := group.SensorsIssue[sensor.Mac]
+		if ok {
+			// do not take it to account a sensor with an issue
+			continue
+		}
+
+		switch sensorRule {
+		case gm.SensorAverage:
+			group.Temperature += sensor.Temperature / nbValidSensors
+			group.Humidity += sensor.Humidity / nbValidSensors
+		case gm.SensorMax:
+			if group.Humidity < sensor.Humidity {
+				group.Humidity = sensor.Humidity
+			}
+		case gm.SensorMin:
+			if group.Humidity > sensor.Humidity {
+				group.Humidity = sensor.Humidity
 			}
 		}
 	}

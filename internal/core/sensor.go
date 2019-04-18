@@ -15,6 +15,7 @@ type SensorEvent struct {
 	Mac         string `json:"mac"`
 	Temperature int    `json:"temperature"`
 	Brightness  int    `json:"brightness"`
+	Humidity    int    `json:"humidity"`
 	Presence    bool   `json:"presence"`
 }
 
@@ -225,6 +226,7 @@ func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 		evt := SensorEvent{
 			Mac:         sensor.Mac,
 			Temperature: sensor.Temperature,
+			Humidity:    sensor.Humidity,
 			Brightness:  sensor.Brightness,
 			Presence:    sensor.Presence,
 		}
