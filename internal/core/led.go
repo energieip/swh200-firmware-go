@@ -95,6 +95,7 @@ func (s *Service) removeLed(mac string) {
 		IsConfigured: &isConfigured,
 	}
 	s.sendLedUpdate(remove)
+	s.driversSeen.Remove(mac)
 }
 
 func (s *Service) updateLedStatus(led dl.Led) error {
@@ -229,7 +230,7 @@ func (s *Service) onLedHello(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
-	s.driversSeen[led.Mac] = time.Now().UTC()
+	s.driversSeen.Set(led.Mac, time.Now().UTC())
 	led.IsConfigured = false
 	led.SwitchMac = s.mac
 	if led.DumpFrequency == 0 {
@@ -257,7 +258,7 @@ func (s *Service) onLedStatus(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
-	s.driversSeen[led.Mac] = time.Now().UTC()
+	s.driversSeen.Set(led.Mac, time.Now().UTC())
 	led.SwitchMac = s.mac
 	val, ok := s.ledsToAuto[led.Mac]
 	if ok && val != nil {

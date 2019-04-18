@@ -173,7 +173,7 @@ func (s *Service) removeSensor(mac string) {
 			IsConfigured: &isConfigured,
 		}
 		s.sendSensorUpdate(remove)
-		delete(s.driversSeen, mac)
+		s.driversSeen.Remove(mac)
 	}
 }
 
@@ -185,7 +185,7 @@ func (s *Service) onSensorHello(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
-	s.driversSeen[sensor.Mac] = time.Now().UTC()
+	s.driversSeen.Set(sensor.Mac, time.Now().UTC())
 	sensor.IsConfigured = false
 	sensor.SwitchMac = s.mac
 	if sensor.DumpFrequency == 0 {
@@ -210,7 +210,7 @@ func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
-	s.driversSeen[sensor.Mac] = time.Now().UTC()
+	s.driversSeen.Set(sensor.Mac, time.Now().UTC())
 	sensor.SwitchMac = s.mac
 	// apply brightness correction Factor
 	sensor.Brightness = sensor.BrightnessRaw / sensor.BrightnessCorrectionFactor

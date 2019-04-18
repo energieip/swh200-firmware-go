@@ -50,6 +50,7 @@ func (s *Service) removeHvac(mac string) {
 	}
 	remove.IsConfigured = &isConfigured
 	s.sendHvacUpdate(remove)
+	s.driversSeen.Remove(mac)
 }
 
 func (s *Service) updateHvacStatus(driver dhvac.Hvac) error {
@@ -132,7 +133,7 @@ func (s *Service) onHvacHello(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
-	s.driversSeen[driver.Mac] = time.Now().UTC()
+	s.driversSeen.Set(driver.Mac, time.Now().UTC())
 	if driver.DumpFrequency == 0 {
 		driver.DumpFrequency = 1000 //ms default value for hello
 	}
@@ -161,7 +162,7 @@ func (s *Service) onHvacStatus(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
-	s.driversSeen[driver.Mac] = time.Now().UTC()
+	s.driversSeen.Set(driver.Mac, time.Now().UTC())
 	driver.SwitchMac = s.mac
 	err = s.updateHvacStatus(driver)
 	if err != nil {

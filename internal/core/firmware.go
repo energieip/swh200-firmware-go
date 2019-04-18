@@ -16,6 +16,7 @@ import (
 	sd "github.com/energieip/common-components-go/pkg/dswitch"
 	pkg "github.com/energieip/common-components-go/pkg/service"
 	"github.com/energieip/common-components-go/pkg/tools"
+	cmap "github.com/orcaman/concurrent-map"
 	"github.com/romana/rlog"
 )
 
@@ -53,7 +54,7 @@ type Service struct {
 	hvacs                 map[string]dhvac.Hvac
 	conf                  pkg.ServiceConfig
 	clientID              string
-	driversSeen           map[string]time.Time
+	driversSeen           cmap.ConcurrentMap
 	api                   *api.API
 }
 
@@ -69,7 +70,7 @@ func (s *Service) Initialize(confFile string) error {
 	s.hvacs = make(map[string]dhvac.Hvac)
 	s.groups = make(map[int]Group)
 	s.cluster = make(map[string]ClusterNetwork)
-	s.driversSeen = make(map[string]time.Time)
+	s.driversSeen = cmap.New()
 
 	conf, err := pkg.ReadServiceConfig(confFile)
 	if err != nil {
@@ -213,16 +214,16 @@ func (s *Service) sendDump() {
 	dumpBlinds := make(map[string]dblind.Blind)
 	dumpHvacs := make(map[string]dhvac.Hvac)
 	for _, driver := range leds {
-		val, ok := s.driversSeen[driver.Mac]
+		val, ok := s.driversSeen.Get(driver.Mac)
 		if ok {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
-			if timeNow.Sub(val) <= maxDuration {
+			if timeNow.Sub(val.(time.Time)) <= maxDuration {
 				dumpLeds[driver.Mac] = driver
 				continue
 			} else {
 				rlog.Warn("LED " + driver.Mac + " no longer seen; drop it")
 				delete(s.leds, driver.Mac)
-				delete(s.driversSeen, driver.Mac)
+				s.driversSeen.Remove(driver.Mac)
 				_, ok := s.ledsToAuto[driver.Mac]
 				if ok {
 					delete(s.ledsToAuto, driver.Mac)
@@ -234,17 +235,17 @@ func (s *Service) sendDump() {
 	status.Leds = dumpLeds
 
 	for _, driver := range sensors {
-		val, ok := s.driversSeen[driver.Mac]
+		val, ok := s.driversSeen.Get(driver.Mac)
 		if ok {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
-			if timeNow.Sub(val) <= maxDuration {
+			if timeNow.Sub(val.(time.Time)) <= maxDuration {
 				dumpSensors[driver.Mac] = driver
 				continue
 			} else {
 				rlog.Warn("Sensor " + driver.Mac + " no longer seen; drop it")
 				s.sendInvalidStatus(driver)
 				delete(s.sensors, driver.Mac)
-				delete(s.driversSeen, driver.Mac)
+				s.driversSeen.Remove(driver.Mac)
 				database.RemoveSensorStatus(s.db, driver.Mac)
 			}
 		}
@@ -252,16 +253,16 @@ func (s *Service) sendDump() {
 	status.Sensors = dumpSensors
 
 	for _, driver := range blinds {
-		val, ok := s.driversSeen[driver.Mac]
+		val, ok := s.driversSeen.Get(driver.Mac)
 		if ok {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
-			if timeNow.Sub(val) <= maxDuration {
+			if timeNow.Sub(val.(time.Time)) <= maxDuration {
 				dumpBlinds[driver.Mac] = driver
 				continue
 			} else {
 				rlog.Warn("Blind " + driver.Mac + " no longer seen; drop it")
 				delete(s.blinds, driver.Mac)
-				delete(s.driversSeen, driver.Mac)
+				s.driversSeen.Remove(driver.Mac)
 				database.RemoveBlindStatus(s.db, driver.Mac)
 			}
 		}
@@ -269,16 +270,16 @@ func (s *Service) sendDump() {
 	status.Blinds = dumpBlinds
 
 	for _, driver := range hvacs {
-		val, ok := s.driversSeen[driver.Mac]
+		val, ok := s.driversSeen.Get(driver.Mac)
 		if ok {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
-			if timeNow.Sub(val) <= maxDuration {
+			if timeNow.Sub(val.(time.Time)) <= maxDuration {
 				dumpHvacs[driver.Mac] = driver
 				continue
 			} else {
 				rlog.Warn("HVAC " + driver.Mac + " no longer seen; drop it")
 				delete(s.hvacs, driver.Mac)
-				delete(s.driversSeen, driver.Mac)
+				s.driversSeen.Remove(driver.Mac)
 				database.RemoveHvacStatus(s.db, driver.Mac)
 			}
 		}
