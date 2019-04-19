@@ -227,6 +227,7 @@ func (s *Service) dumpGroupStatus(group Group) error {
 		SetpointLedsFirstDay: group.FirstDaySetpoint,
 	}
 
+	rlog.Info("===== get === ", status.Brightness)
 	return database.UpdateGroupStatus(s.db, status)
 }
 
@@ -263,7 +264,7 @@ func (s *Service) groupRun(group *Group) error {
 			case <-ticker.C:
 				group.Counter++
 				if s.isManualMode(group) {
-					if len(group.Sensors) > 0 {
+					if group.Sensors.Count() > 0 {
 						// compute TimeToAuto and switch back to Auto mode
 						if group.Runtime.Watchdog != nil {
 							//decrease only when a rule exists
@@ -286,10 +287,11 @@ func (s *Service) groupRun(group *Group) error {
 				s.computePresence(group)
 				s.computeOpen(group)
 				s.computeTemperatureAndHumidity(group)
+				s.computeBrightness(group)
 
 				//force re-check mode due to the switch back manual to auto mode
 				if !s.isManualMode(group) {
-					s.computeBrightness(group)
+
 					if group.Presence != group.LastPresenceStatus {
 						if !group.Presence {
 							//leave room empty
@@ -374,7 +376,7 @@ func (s *Service) hasWindowOpened(group *Group) bool {
 func (s *Service) computeOpen(group *Group) {
 	opened := s.hasWindowOpened(group)
 
-	if len(group.Blinds) == 0 {
+	if group.Blinds.Count() == 0 {
 		//force status close when there is no blind in the group
 		group.Opened = false
 		return
@@ -386,7 +388,7 @@ func (s *Service) computePresence(group *Group) {
 	group.LastPresenceStatus = group.Presence
 	presence := s.isPresenceDetected(group)
 
-	if len(group.Sensors) == 0 {
+	if group.Sensors.Count() == 0 {
 		//stay in manual mode
 		group.Presence = true
 		return
@@ -464,7 +466,7 @@ func (s *Service) computeBrightness(group *Group) {
 		//No sensors in this group
 		return
 	}
-	nbValidSensors := len(group.Sensors) - len(group.SensorsIssue)
+	nbValidSensors := group.Sensors.Count() - group.SensorsIssue.Count()
 	if nbValidSensors <= 0 {
 		//no valid sensor found
 		return
@@ -502,6 +504,7 @@ func (s *Service) computeBrightness(group *Group) {
 			}
 		}
 	}
+	rlog.Info("===== get bright    ", group.Brightness)
 }
 
 func (s *Service) computeTemperatureAndHumidity(group *Group) {
@@ -525,7 +528,7 @@ func (s *Service) computeTemperatureAndHumidity(group *Group) {
 		//No sensors in this group
 		return
 	}
-	nbValidSensors := len(group.Sensors) - len(group.SensorsIssue)
+	nbValidSensors := group.Sensors.Count() - group.SensorsIssue.Count()
 	if nbValidSensors <= 0 {
 		//no valid sensor found
 		return
