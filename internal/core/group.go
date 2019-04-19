@@ -12,6 +12,7 @@ import (
 	"github.com/energieip/common-components-go/pkg/dgroup"
 	gm "github.com/energieip/common-components-go/pkg/dgroup"
 	"github.com/energieip/common-components-go/pkg/network"
+	cmap "github.com/orcaman/concurrent-map"
 	"github.com/romana/rlog"
 )
 
@@ -37,11 +38,11 @@ type Group struct {
 	DbID               string //Database entry ID
 	PresenceTimeout    int
 	Error              int
-	Sensors            map[string]SensorEvent
-	SensorsIssue       map[string]bool
-	Blinds             map[string]BlindEvent
-	BlindsIssue        map[string]bool
-	FirstDay           map[string]bool
+	Sensors            cmap.ConcurrentMap
+	SensorsIssue       cmap.ConcurrentMap
+	Blinds             cmap.ConcurrentMap
+	BlindsIssue        cmap.ConcurrentMap
+	FirstDay           cmap.ConcurrentMap
 	SetpointBlinds     *int
 	SetpointSlatBlinds *int
 	LastPresenceStatus bool
@@ -71,11 +72,11 @@ func (s *Service) onGroupSensorEvent(client network.Client, msg network.Message)
 		return
 	}
 
-	group.Sensors[sensor.Mac] = sensor
-	_, ok = group.SensorsIssue[sensor.Mac]
+	group.Sensors.Set(sensor.Mac, sensor)
+	_, ok = group.SensorsIssue.Get(sensor.Mac)
 	if ok {
 		//sensor no longer problematic
-		delete(group.SensorsIssue, sensor.Mac)
+		group.SensorsIssue.Remove(sensor.Mac)
 	}
 }
 
@@ -100,11 +101,11 @@ func (s *Service) onGroupBlindEvent(client network.Client, msg network.Message) 
 		return
 	}
 
-	group.Blinds[blind.Mac] = blind
-	_, ok = group.BlindsIssue[blind.Mac]
+	group.Blinds.Set(blind.Mac, blind)
+	_, ok = group.BlindsIssue.Get(blind.Mac)
 	if ok {
 		//blind no longer problematic
-		delete(group.BlindsIssue, blind.Mac)
+		group.BlindsIssue.Remove(blind.Mac)
 	}
 }
 
@@ -129,7 +130,7 @@ func (s *Service) onGroupErrorEvent(client network.Client, msg network.Message) 
 		return
 	}
 
-	group.SensorsIssue[sensor.Mac] = true
+	group.SensorsIssue.Set(sensor.Mac, true)
 }
 
 func (s *Service) onGroupBlindErrorEvent(client network.Client, msg network.Message) {
@@ -153,7 +154,7 @@ func (s *Service) onGroupBlindErrorEvent(client network.Client, msg network.Mess
 		return
 	}
 
-	group.BlindsIssue[blind.Mac] = true
+	group.BlindsIssue.Set(blind.Mac, true)
 }
 
 func (s *Service) dumpGroupStatus(group Group) error {
@@ -341,8 +342,9 @@ func (s *Service) isManualMode(group *Group) bool {
 }
 
 func (s *Service) isPresenceDetected(group *Group) bool {
-	for _, sensor := range group.Sensors {
-		_, ok := group.SensorsIssue[sensor.Mac]
+	for _, driver := range group.Sensors.Items() {
+		sensor, _ := ToSensorEvent(driver)
+		_, ok := group.SensorsIssue.Get(sensor.Mac)
 		if ok {
 			// do not take it to account a sensor with an issue
 			continue
@@ -355,8 +357,9 @@ func (s *Service) isPresenceDetected(group *Group) bool {
 }
 
 func (s *Service) hasWindowOpened(group *Group) bool {
-	for _, blind := range group.Blinds {
-		_, ok := group.BlindsIssue[blind.Mac]
+	for _, driver := range group.Blinds.Items() {
+		blind, _ := ToBlindEvent(driver)
+		_, ok := group.BlindsIssue.Get(blind.Mac)
 		if ok {
 			// do not take it to account a sensor with an issue
 			continue
@@ -445,13 +448,16 @@ func (s *Service) updateBrightness(group *Group) {
 func (s *Service) computeBrightness(group *Group) {
 	//compute sensor values
 	refMac := ""
-	for mac := range group.Sensors {
-		_, ok := group.SensorsIssue[mac]
+	bright := 0
+	for _, driver := range group.Sensors.Items() {
+		sensor, _ := ToSensorEvent(driver)
+		_, ok := group.SensorsIssue.Get(sensor.Mac)
 		if ok {
 			// do not take it to account a sensor with an issue
 			continue
 		}
-		refMac = mac
+		refMac = sensor.Mac
+		bright = sensor.Brightness
 		break
 	}
 	if refMac == "" {
@@ -464,19 +470,20 @@ func (s *Service) computeBrightness(group *Group) {
 		return
 	}
 
-	group.Brightness = group.Sensors[refMac].Brightness / nbValidSensors
+	group.Brightness = bright / nbValidSensors
 
 	sensorRule := gm.SensorAverage
 	if group.Runtime.SensorRule != nil {
 		sensorRule = *group.Runtime.SensorRule
 	}
 
-	for mac, sensor := range group.Sensors {
+	for mac, driver := range group.Sensors.Items() {
 		if mac == refMac {
 			continue
 		}
+		sensor, _ := ToSensorEvent(driver)
 
-		_, ok := group.SensorsIssue[sensor.Mac]
+		_, ok := group.SensorsIssue.Get(sensor.Mac)
 		if ok {
 			// do not take it to account a sensor with an issue
 			continue
@@ -500,13 +507,18 @@ func (s *Service) computeBrightness(group *Group) {
 func (s *Service) computeTemperatureAndHumidity(group *Group) {
 	//compute sensor values
 	refMac := ""
-	for mac := range group.Sensors {
-		_, ok := group.SensorsIssue[mac]
+	hum := 0
+	temp := 0
+	for mac, driver := range group.Sensors.Items() {
+		sensor, _ := ToSensorEvent(driver)
+		_, ok := group.SensorsIssue.Get(mac)
 		if ok {
 			// do not take it to account a sensor with an issue
 			continue
 		}
 		refMac = mac
+		hum = sensor.Humidity
+		temp = sensor.Temperature
 		break
 	}
 	if refMac == "" {
@@ -519,20 +531,22 @@ func (s *Service) computeTemperatureAndHumidity(group *Group) {
 		return
 	}
 
-	group.Temperature = group.Sensors[refMac].Temperature / nbValidSensors
-	group.Humidity = group.Sensors[refMac].Humidity / nbValidSensors
+	group.Temperature = temp / nbValidSensors
+	group.Humidity = hum / nbValidSensors
 
 	sensorRule := gm.SensorAverage
 	if group.Runtime.SensorRule != nil {
 		sensorRule = *group.Runtime.SensorRule
 	}
 
-	for mac, sensor := range group.Sensors {
+	for mac, d := range group.Sensors.Items() {
 		if mac == refMac {
 			continue
 		}
 
-		_, ok := group.SensorsIssue[sensor.Mac]
+		sensor, _ := ToSensorEvent(d)
+
+		_, ok := group.SensorsIssue.Get(sensor.Mac)
 		if ok {
 			// do not take it to account a sensor with an issue
 			continue
@@ -591,7 +605,7 @@ func (s *Service) setpointLed(group *Group) {
 	}
 
 	for _, led := range group.Runtime.Leds {
-		_, ok := group.FirstDay[led]
+		_, ok := group.FirstDay.Get(led)
 		setpoint := group.Setpoint
 		if auto && ok {
 			setpoint = group.FirstDaySetpoint
@@ -616,30 +630,30 @@ func (s *Service) createGroup(runtime gm.GroupConfig) {
 		Event:        make(chan map[string]*gm.GroupConfig),
 		Runtime:      runtime,
 		Scale:        10,
-		Sensors:      make(map[string]SensorEvent),
-		SensorsIssue: make(map[string]bool),
-		Blinds:       make(map[string]BlindEvent),
-		BlindsIssue:  make(map[string]bool),
-		FirstDay:     make(map[string]bool),
+		Sensors:      cmap.New(),
+		SensorsIssue: cmap.New(),
+		Blinds:       cmap.New(),
+		BlindsIssue:  cmap.New(),
+		FirstDay:     cmap.New(),
 	}
 	for _, sensor := range runtime.Sensors {
-		group.Sensors[sensor] = SensorEvent{}
+		group.Sensors.Set(sensor, SensorEvent{})
 	}
 
 	for _, blind := range runtime.Blinds {
-		group.Blinds[blind] = BlindEvent{}
+		group.Blinds.Set(blind, BlindEvent{})
 	}
 
 	for _, led := range runtime.FirstDay {
-		group.FirstDay[led] = true
+		group.FirstDay.Set(led, true)
 	}
 	for _, sensor := range runtime.Sensors {
 		//to be sure of the state after a creation or a restart
-		group.SensorsIssue[sensor] = true
+		group.SensorsIssue.Set(sensor, true)
 	}
 	for _, blind := range runtime.Blinds {
 		//to be sure of the state after a creation or a restart
-		group.BlindsIssue[blind] = true
+		group.BlindsIssue.Set(blind, true)
 	}
 	s.groups[runtime.Group] = group
 	s.groupRun(&group)
@@ -724,16 +738,16 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 		gr.Runtime.FirstDay = new.FirstDay
 		seen := make(map[string]bool)
 		for _, led := range new.FirstDay {
-			_, ok := gr.FirstDay[led]
+			_, ok := gr.FirstDay.Get(led)
 			if !ok {
-				gr.FirstDay[led] = true
+				gr.FirstDay.Set(led, true)
 			}
 			seen[led] = true
 		}
-		for mac := range gr.FirstDay {
+		for mac := range gr.FirstDay.Items() {
 			_, ok := seen[mac]
 			if !ok {
-				delete(gr.FirstDay, mac)
+				gr.FirstDay.Remove(mac)
 			}
 		}
 
@@ -746,21 +760,21 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 		gr.Runtime.Blinds = new.Blinds
 		seen := make(map[string]bool)
 		for _, blind := range new.Blinds {
-			_, ok := gr.Blinds[blind]
+			_, ok := gr.Blinds.Get(blind)
 			if !ok {
-				gr.Blinds[blind] = BlindEvent{}
+				gr.Blinds.Set(blind, BlindEvent{})
 			}
 			seen[blind] = true
 			// do not take in to consideration until we received valid information from the blind
-			gr.BlindsIssue[blind] = true
+			gr.BlindsIssue.Set(blind, true)
 		}
-		for mac := range gr.Blinds {
+		for mac := range gr.Blinds.Items() {
 			_, ok := seen[mac]
 			if !ok {
-				delete(gr.Blinds, mac)
-				_, ok := gr.BlindsIssue[mac]
+				gr.Blinds.Remove(mac)
+				_, ok := gr.BlindsIssue.Get(mac)
 				if ok {
-					delete(gr.BlindsIssue, mac)
+					gr.BlindsIssue.Remove(mac)
 				}
 			}
 		}
@@ -772,21 +786,21 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 		gr.Runtime.Sensors = new.Sensors
 		seen := make(map[string]bool)
 		for _, sensor := range new.Sensors {
-			_, ok := gr.Sensors[sensor]
+			_, ok := gr.Sensors.Get(sensor)
 			if !ok {
-				gr.Sensors[sensor] = SensorEvent{}
+				gr.Sensors.Set(sensor, SensorEvent{})
 			}
 			seen[sensor] = true
 			// do not take in to consideration until we received valid information from the sensor
-			gr.SensorsIssue[sensor] = true
+			gr.SensorsIssue.Set(sensor, true)
 		}
-		for mac := range gr.Sensors {
+		for mac := range gr.Sensors.Items() {
 			_, ok := seen[mac]
 			if !ok {
-				delete(gr.Sensors, mac)
-				_, ok := gr.SensorsIssue[mac]
+				gr.Sensors.Remove(mac)
+				_, ok := gr.SensorsIssue.Get(mac)
 				if ok {
-					delete(gr.SensorsIssue, mac)
+					gr.SensorsIssue.Remove(mac)
 				}
 			}
 		}
