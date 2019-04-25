@@ -227,7 +227,6 @@ func (s *Service) dumpGroupStatus(group Group) error {
 		SetpointLedsFirstDay: group.FirstDaySetpoint,
 	}
 
-	rlog.Info("===== get === ", status.Brightness)
 	return database.UpdateGroupStatus(s.db, status)
 }
 
@@ -504,7 +503,6 @@ func (s *Service) computeBrightness(group *Group) {
 			}
 		}
 	}
-	rlog.Info("===== get bright    ", group.Brightness)
 }
 
 func (s *Service) computeTemperatureAndHumidity(group *Group) {
