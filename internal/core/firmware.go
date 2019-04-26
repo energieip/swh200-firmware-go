@@ -230,6 +230,11 @@ func (s *Service) sendDump() {
 				}
 				database.RemoveLedStatus(s.db, driver.Mac)
 			}
+		} else {
+			_, ok := s.leds.Get(driver.Mac)
+			if ok {
+				s.leds.Remove(driver.Mac)
+			}
 		}
 	}
 	status.Leds = dumpLeds
@@ -248,6 +253,11 @@ func (s *Service) sendDump() {
 				s.driversSeen.Remove(driver.Mac)
 				database.RemoveSensorStatus(s.db, driver.Mac)
 			}
+		} else {
+			_, ok := s.sensors.Get(driver.Mac)
+			if ok {
+				s.sensors.Remove(driver.Mac)
+			}
 		}
 	}
 	status.Sensors = dumpSensors
@@ -265,6 +275,11 @@ func (s *Service) sendDump() {
 				s.driversSeen.Remove(driver.Mac)
 				database.RemoveBlindStatus(s.db, driver.Mac)
 			}
+		} else {
+			_, ok := s.blinds.Get(driver.Mac)
+			if ok {
+				s.blinds.Remove(driver.Mac)
+			}
 		}
 	}
 	status.Blinds = dumpBlinds
@@ -281,6 +296,11 @@ func (s *Service) sendDump() {
 				s.hvacs.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
 				database.RemoveHvacStatus(s.db, driver.Mac)
+			}
+		} else {
+			_, ok := s.hvacs.Get(driver.Mac)
+			if ok {
+				s.hvacs.Remove(driver.Mac)
 			}
 		}
 	}
