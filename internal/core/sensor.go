@@ -77,7 +77,7 @@ func (s *Service) sendSensorUpdate(sensor ds.SensorConf) {
 
 func (s *Service) updateSensorStatus(sensor ds.Sensor) error {
 	v, ok := s.sensors.Get(sensor.Mac)
-	if ok {
+	if ok && v != nil {
 		val := v.(ds.Sensor)
 		if val == sensor {
 			return nil

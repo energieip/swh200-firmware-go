@@ -215,7 +215,7 @@ func (s *Service) sendDump() {
 	dumpHvacs := make(map[string]dhvac.Hvac)
 	for _, driver := range leds {
 		val, ok := s.driversSeen.Get(driver.Mac)
-		if ok {
+		if ok && val != nil {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
 				dumpLeds[driver.Mac] = driver
@@ -241,7 +241,7 @@ func (s *Service) sendDump() {
 
 	for _, driver := range sensors {
 		val, ok := s.driversSeen.Get(driver.Mac)
-		if ok {
+		if ok && val != nil {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
 				dumpSensors[driver.Mac] = driver
@@ -264,13 +264,14 @@ func (s *Service) sendDump() {
 
 	for _, driver := range blinds {
 		val, ok := s.driversSeen.Get(driver.Mac)
-		if ok {
+		if ok && val != nil {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
 				dumpBlinds[driver.Mac] = driver
 				continue
 			} else {
 				rlog.Warn("Blind " + driver.Mac + " no longer seen; drop it")
+				s.sendInvalidBlindStatus(driver)
 				s.blinds.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
 				database.RemoveBlindStatus(s.db, driver.Mac)
@@ -286,7 +287,7 @@ func (s *Service) sendDump() {
 
 	for _, driver := range hvacs {
 		val, ok := s.driversSeen.Get(driver.Mac)
-		if ok {
+		if ok && val != nil {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
 				dumpHvacs[driver.Mac] = driver

@@ -101,7 +101,7 @@ func (s *Service) removeLed(mac string) {
 func (s *Service) updateLedStatus(led dl.Led) error {
 	var err error
 	v, ok := s.leds.Get(led.Mac)
-	if ok {
+	if ok && v != nil {
 		val := v.(dl.Led)
 		if val == led {
 			//case no change

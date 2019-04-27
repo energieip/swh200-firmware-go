@@ -113,7 +113,7 @@ func (s *Service) removeBlind(mac string) {
 func (s *Service) updateBlindStatus(driver dblind.Blind) error {
 	var err error
 	v, ok := s.blinds.Get(driver.Mac)
-	if ok {
+	if ok && v != nil {
 		val := v.(dblind.Blind)
 		if val == driver {
 			//case no change
@@ -233,7 +233,7 @@ func (s *Service) sendInvalidBlindStatus(driver dblind.Blind) {
 
 func (s *Service) onBlindStatus(client network.Client, msg network.Message) {
 	topic := msg.Topic()
-	rlog.Debug(topic + " : " + string(msg.Payload()))
+	rlog.Info(topic + " : " + string(msg.Payload()))
 	var driver dblind.Blind
 	err := json.Unmarshal(msg.Payload(), &driver)
 	if err != nil {
