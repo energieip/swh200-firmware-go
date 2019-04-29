@@ -179,6 +179,7 @@ func (s *Service) removeSensor(mac string) {
 			Mac:          mac,
 			IsConfigured: &isConfigured,
 		}
+		s.sensors.Remove(mac)
 		s.sendSensorUpdate(remove)
 		s.driversSeen.Remove(mac)
 	}

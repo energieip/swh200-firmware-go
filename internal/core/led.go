@@ -94,6 +94,7 @@ func (s *Service) removeLed(mac string) {
 		Mac:          mac,
 		IsConfigured: &isConfigured,
 	}
+	s.leds.Remove(mac)
 	s.sendLedUpdate(remove)
 	s.driversSeen.Remove(mac)
 }
