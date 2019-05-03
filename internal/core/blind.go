@@ -123,14 +123,7 @@ func (s *Service) updateBlindStatus(driver dblind.Blind) error {
 	// }
 
 	// Check if the serial already exist in database (case restart process)
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = driver.Mac
-	dbID := database.GetObjectID(s.db, dblind.DbStatus, dblind.TableName, criteria)
-	if dbID == "" {
-		_, err = s.db.InsertRecord(dblind.DbStatus, dblind.TableName, driver)
-	} else {
-		err = s.db.UpdateRecord(dblind.DbStatus, dblind.TableName, dbID, driver)
-	}
+	err = database.SaveBlindStatus(s.db, driver)
 	if err == nil {
 		s.blinds.Set(driver.Mac, driver)
 	}
@@ -138,16 +131,7 @@ func (s *Service) updateBlindStatus(driver dblind.Blind) error {
 }
 
 func (s *Service) prepareBlindSetup(driver dblind.BlindSetup) {
-	var err error
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = driver.Mac
-	dbID := database.GetObjectID(s.db, dblind.DbConfig, dblind.TableName, criteria)
-
-	if dbID == "" {
-		_, err = s.db.InsertRecord(dblind.DbConfig, dblind.TableName, driver)
-	} else {
-		err = s.db.UpdateRecord(dblind.DbConfig, dblind.TableName, dbID, driver)
-	}
+	err := database.SaveBlindSetup(s.db, driver)
 	if err != nil {
 		rlog.Error("Cannot update database", err.Error())
 	}
@@ -161,7 +145,7 @@ func (s *Service) prepareBlindSetup(driver dblind.BlindSetup) {
 }
 
 func (s *Service) updateBlindConfig(cfg dblind.BlindConf) {
-	setup, dbID := s.getBlindConfig(cfg.Mac)
+	setup, dbID := database.GetBlindConfig(s.db, cfg.Mac)
 	if setup == nil || dbID == "" {
 		return
 	}
@@ -260,24 +244,4 @@ func (s *Service) onBlindStatus(client network.Client, msg network.Message) {
 	} else {
 		s.sendInvalidBlindStatus(driver)
 	}
-}
-
-func (s *Service) getBlindConfig(mac string) (*dblind.BlindSetup, string) {
-	var dbID string
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = mac
-	stored, err := s.db.GetRecord(dblind.DbConfig, dblind.TableName, criteria)
-	if err != nil || stored == nil {
-		return nil, dbID
-	}
-	m := stored.(map[string]interface{})
-	id, ok := m["id"]
-	if ok {
-		dbID = id.(string)
-	}
-	driver, err := dblind.ToBlindSetup(stored)
-	if err != nil {
-		return nil, dbID
-	}
-	return driver, dbID
 }

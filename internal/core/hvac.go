@@ -80,16 +80,7 @@ func (s *Service) updateHvacStatus(driver dhvac.Hvac) error {
 }
 
 func (s *Service) prepareHvacSetup(driver dhvac.HvacSetup) {
-	var err error
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = driver.Mac
-	dbID := database.GetObjectID(s.db, dhvac.DbConfig, dhvac.TableName, criteria)
-
-	if dbID == "" {
-		_, err = s.db.InsertRecord(dhvac.DbConfig, dhvac.TableName, driver)
-	} else {
-		err = s.db.UpdateRecord(dhvac.DbConfig, dhvac.TableName, dbID, driver)
-	}
+	err := database.SaveHvacSetup(s.db, driver)
 	if err != nil {
 		rlog.Error("Cannot update database", err.Error())
 	}
@@ -103,7 +94,7 @@ func (s *Service) prepareHvacSetup(driver dhvac.HvacSetup) {
 }
 
 func (s *Service) updateHvacConfig(cfg dhvac.HvacConf) {
-	setup, dbID := s.getHvacConfig(cfg.Mac)
+	setup, dbID := database.GetHvacConfig(s.db, cfg.Mac)
 	if setup == nil || dbID == "" {
 		return
 	}
@@ -174,24 +165,4 @@ func (s *Service) onHvacStatus(client network.Client, msg network.Message) {
 	if err != nil {
 		rlog.Error("Error during database update ", err.Error())
 	}
-}
-
-func (s *Service) getHvacConfig(mac string) (*dhvac.HvacSetup, string) {
-	var dbID string
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = mac
-	stored, err := s.db.GetRecord(dhvac.DbConfig, dhvac.TableName, criteria)
-	if err != nil || stored == nil {
-		return nil, dbID
-	}
-	m := stored.(map[string]interface{})
-	id, ok := m["id"]
-	if ok {
-		dbID = id.(string)
-	}
-	driver, err := dhvac.ToHvacSetup(stored)
-	if err != nil {
-		return nil, dbID
-	}
-	return driver, dbID
 }

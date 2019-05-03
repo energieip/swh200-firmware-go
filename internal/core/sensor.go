@@ -84,15 +84,7 @@ func (s *Service) updateSensorStatus(sensor ds.Sensor) error {
 		}
 	}
 
-	var err error
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = sensor.Mac
-	dbID := database.GetObjectID(s.db, ds.DbStatus, ds.TableName, criteria)
-	if dbID == "" {
-		_, err = s.db.InsertRecord(ds.DbStatus, ds.TableName, sensor)
-	} else {
-		err = s.db.UpdateRecord(ds.DbStatus, ds.TableName, dbID, sensor)
-	}
+	err := database.SaveSensorStatus(s.db, sensor)
 	if err == nil {
 		s.sensors.Set(sensor.Mac, sensor)
 	}
@@ -100,16 +92,7 @@ func (s *Service) updateSensorStatus(sensor ds.Sensor) error {
 }
 
 func (s *Service) prepareSensorSetup(sensor ds.SensorSetup) {
-	var err error
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = sensor.Mac
-	dbID := database.GetObjectID(s.db, ds.DbConfig, ds.TableName, criteria)
-
-	if dbID == "" {
-		_, err = s.db.InsertRecord(ds.DbConfig, ds.TableName, sensor)
-	} else {
-		err = s.db.UpdateRecord(ds.DbConfig, ds.TableName, dbID, sensor)
-	}
+	err := database.SaveSensorSetup(s.db, sensor)
 	if err != nil {
 		rlog.Error("Cannot update database", err.Error())
 	}
@@ -124,7 +107,7 @@ func (s *Service) prepareSensorSetup(sensor ds.SensorSetup) {
 }
 
 func (s *Service) updateSensorConfig(cfg ds.SensorConf) {
-	setup, dbID := s.getSensorConfig(cfg.Mac)
+	setup, dbID := database.GetSensorConfig(s.db, cfg.Mac)
 	if setup == nil || dbID == "" {
 		return
 	}
@@ -254,24 +237,4 @@ func (s *Service) sendInvalidStatus(sensor ds.Sensor) {
 
 	s.clusterSendCommand(url, dump)
 	s.localSendCommand(url, dump)
-}
-
-func (s *Service) getSensorConfig(mac string) (*ds.SensorSetup, string) {
-	var dbID string
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = mac
-	stored, err := s.db.GetRecord(ds.DbConfig, ds.TableName, criteria)
-	if err != nil || stored == nil {
-		return nil, dbID
-	}
-	m := stored.(map[string]interface{})
-	id, ok := m["id"]
-	if ok {
-		dbID = id.(string)
-	}
-	driver, err := ds.ToSensorSetup(stored)
-	if err != nil {
-		return nil, dbID
-	}
-	return driver, dbID
 }

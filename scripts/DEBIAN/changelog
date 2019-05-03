@@ -1,3 +1,11 @@
+energieip-swh200-firmware (1.0) UNRELEASED; urgency=medium
+
+  * Code refactor
+  * Add user authentication mechanisms
+
+ -- Amandine Drebes <amandine@energie-ip.com>  Fri, 3 May 2019 18:19:24 +0000
+
+
 energieip-swh200-firmware (0.1-1) UNRELEASED; urgency=medium
 
   * Initial release.
