@@ -16,6 +16,9 @@ type API struct {
 	apiMutex    sync.Mutex
 	certificate string
 	keyfile     string
+	apiPort     string
+	apiPassword string
+	apiIp       string
 }
 
 type APIInfo struct {
@@ -42,6 +45,9 @@ func InitAPI(db database.Database, conf pkg.ServiceConfig) *API {
 		db:          db,
 		certificate: conf.Certificate,
 		keyfile:     conf.Key,
+		apiIp:       conf.APIIp,
+		apiPassword: conf.APIPassword,
+		apiPort:     conf.APIPort,
 	}
 	go api.swagger()
 	return &api
@@ -174,5 +180,5 @@ func (api *API) swagger() {
 	router.HandleFunc("/versions", api.getAPIs).Methods("GET")
 	router.HandleFunc("/functions", api.getFunctions).Methods("GET")
 
-	log.Fatal(http.ListenAndServeTLS(":8888", api.certificate, api.keyfile, router))
+	log.Fatal(http.ListenAndServeTLS(api.apiIp+":"+api.apiPort, api.certificate, api.keyfile, router))
 }
