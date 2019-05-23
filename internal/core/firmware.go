@@ -496,7 +496,7 @@ func (s *Service) Run() error {
 					s.friendlyName = event.FriendlyName
 					// s.systemUpdate(event)
 					// s.packagesInstall(event)
-					// s.updateConfiguration(event)
+					s.updateConfiguration(event)
 
 				case EventServerRemove:
 					if !s.isConfigured {
