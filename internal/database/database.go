@@ -8,6 +8,7 @@ import (
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
 	sd "github.com/energieip/common-components-go/pkg/dswitch"
+	"github.com/energieip/common-components-go/pkg/duser"
 	pkg "github.com/energieip/common-components-go/pkg/service"
 	"github.com/romana/rlog"
 )
@@ -15,7 +16,9 @@ import (
 type Database = database.DatabaseInterface
 
 const (
+	ConfigDB     = "config"
 	TableCluster = "clusters"
+	AccessTable  = "access"
 )
 
 //ConnectDatabase
@@ -50,6 +53,7 @@ func ConnectDatabase(ip, port string) (Database, error) {
 			tableCfg[dblind.TableName] = dblind.BlindSetup{}
 			tableCfg[TableCluster] = pkg.Broker{}
 			tableCfg[dhvac.TableName] = dhvac.HvacSetup{}
+			tableCfg[AccessTable] = duser.UserAccess{}
 		} else {
 			tableCfg[dl.TableName] = dl.Led{}
 			tableCfg[ds.TableName] = ds.Sensor{}
@@ -85,6 +89,7 @@ func ResetDB(db Database) error {
 			tableCfg[dblind.TableName] = dblind.BlindSetup{}
 			tableCfg[dhvac.TableName] = dhvac.HvacSetup{}
 			tableCfg[TableCluster] = sd.SwitchCluster{}
+			tableCfg[AccessTable] = duser.UserAccess{}
 		} else {
 			tableCfg[dl.TableName] = dl.Led{}
 			tableCfg[ds.TableName] = ds.Sensor{}

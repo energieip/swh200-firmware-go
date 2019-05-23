@@ -345,6 +345,10 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 		s.updateHvacConfig(hvac)
 	}
 
+	for _, user := range switchConfig.Users {
+		database.SaveUserConfig(s.db, user)
+	}
+
 	for grID, group := range switchConfig.Groups {
 		database.UpdateGroupConfig(s.db, group)
 		if _, ok := s.groups[grID]; !ok {
@@ -395,6 +399,10 @@ func (s *Service) removeConfiguration(switchConfig sd.SwitchConfig) {
 
 	for mac := range switchConfig.ClusterBroker {
 		s.removeClusterMember(mac)
+	}
+
+	for user := range switchConfig.Users {
+		database.RemoveUserConfig(s.db, user)
 	}
 }
 
