@@ -42,15 +42,15 @@ func (s *Service) localConnection() error {
 	cbkLocal["/write/group/+/commands"] = s.onGroupCommand
 
 	confLocal := genericNetwork.NetworkConfig{
-		IP:               s.conf.LocalBroker.IP,
-		Port:             s.conf.LocalBroker.Port,
-		ClientName:       s.clientID,
-		Callbacks:        cbkLocal,
-		LogLevel:         s.conf.LogLevel,
-		User:             s.conf.LocalBroker.Login,
-		Password:         s.conf.LocalBroker.Password,
-		ClientKey:        s.conf.LocalBroker.KeyPath,
-		ServerCertificat: s.conf.LocalBroker.CaPath,
+		IP:         s.conf.LocalBroker.IP,
+		Port:       s.conf.LocalBroker.Port,
+		ClientName: s.clientID,
+		Callbacks:  cbkLocal,
+		LogLevel:   s.conf.LogLevel,
+		User:       s.conf.LocalBroker.Login,
+		Password:   s.conf.LocalBroker.Password,
+		CaPath:     s.conf.LocalBroker.CaPath,
+		Secure:     s.conf.LocalBroker.Secure,
 	}
 	return s.local.Iface.Initialize(confLocal)
 }

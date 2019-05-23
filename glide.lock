@@ -1,14 +1,14 @@
 hash: d411425b4f9db07589085d22323989d1ba481bfb0dd3cddbcc5288ab094b4b65
-updated: 2019-05-03T12:01:28.570716045+02:00
+updated: 2019-05-23T14:12:23.004478106+02:00
 imports:
 - name: github.com/cenkalti/backoff
-  version: 1e4cf3da559842a91afcb6ea6141451e6c30c618
+  version: 2146c93394225c3732078705043ce9f26584d334
 - name: github.com/eclipse/paho.mqtt.golang
   version: adca289fdcf8c883800aafa545bc263452290bae
   subpackages:
   - packets
 - name: github.com/energieip/common-components-go
-  version: da5ee3d6685adb8343d84469e0070a605024aa41
+  version: 06e6ca003a6f2857141ac7d26062819f2929d110
   subpackages:
   - pkg/database
   - pkg/dblind
@@ -17,15 +17,16 @@ imports:
   - pkg/dled
   - pkg/dsensor
   - pkg/dswitch
+  - pkg/duser
   - pkg/network
   - pkg/service
   - pkg/tools
 - name: github.com/golang/protobuf
-  version: e91709a02e0e8ff8b86b7aa913fdc9ae9498e825
+  version: b285ee9cfc6c881bb20c0d8dc73370ea9b9ec90f
   subpackages:
   - proto
 - name: github.com/gorilla/mux
-  version: c5c6c98bc25355028a63748a498942a6398ccd22
+  version: ed099d42384823742bba0bf9a72b53b55c9e2e38
 - name: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - name: github.com/konsorten/go-windows-terminal-sequences
@@ -40,20 +41,20 @@ imports:
 - name: github.com/romana/rlog
   version: f018bc92e7d71f27c04e04cbf008860416c21d01
 - name: github.com/sirupsen/logrus
-  version: 5521996833c095f5ac75d99687cef8ad344ded12
+  version: 2a22dbedbad1fd454910cd1f44f210ef90c28464
 - name: golang.org/x/crypto
-  version: a29dc8fdc73485234dbef99ebedb95d2eced08de
+  version: 22d7a77e9e5f409e934ed268692e56707cd169e5
   subpackages:
   - pbkdf2
 - name: golang.org/x/net
-  version: 7f726cade0ab7c929c16ce0b5b25bd201e25f39f
+  version: f3200d17e092c607f615320ecaad13d87ad9a2b3
   subpackages:
   - context
   - internal/socks
   - proxy
   - websocket
 - name: golang.org/x/sys
-  version: a43fa875dd822b81eb6d2ad538bc1f4caba169bd
+  version: 8097e1b27ff5e40620836729a9584e91b094b062
   subpackages:
   - unix
 - name: gopkg.in/fatih/pool.v2

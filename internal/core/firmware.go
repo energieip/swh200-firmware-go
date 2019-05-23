@@ -174,7 +174,7 @@ func (s *Service) sendHello() {
 		rlog.Errorf("Could not send hello to the server %v status %v", s.mac, err.Error())
 		return
 	}
-	rlog.Info("Hello" + s.mac + " sent to the server")
+	rlog.Info("Hello " + s.mac + " sent to the server")
 }
 
 func (s *Service) sendDump() {

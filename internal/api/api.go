@@ -12,13 +12,14 @@ import (
 )
 
 type API struct {
-	db          database.Database
-	apiMutex    sync.Mutex
-	certificate string
-	keyfile     string
-	apiPort     string
-	apiPassword string
-	apiIp       string
+	db             database.Database
+	apiMutex       sync.Mutex
+	certificate    string
+	keyfile        string
+	apiIP          string
+	apiPort        string
+	apiPassword    string
+	browsingFolder string
 }
 
 type APIInfo struct {
@@ -42,12 +43,13 @@ func (api *API) getAPIs(w http.ResponseWriter, req *http.Request) {
 //InitAPI start API connection
 func InitAPI(db database.Database, conf pkg.ServiceConfig) *API {
 	api := API{
-		db:          db,
-		certificate: conf.Certificate,
-		keyfile:     conf.Key,
-		apiIp:       conf.APIIp,
-		apiPassword: conf.APIPassword,
-		apiPort:     conf.APIPort,
+		db:             db,
+		certificate:    conf.ExternalAPI.CertPath,
+		keyfile:        conf.ExternalAPI.KeyPath,
+		apiIP:          conf.ExternalAPI.IP,
+		apiPassword:    conf.ExternalAPI.Password,
+		apiPort:        conf.ExternalAPI.Port,
+		browsingFolder: conf.ExternalAPI.BrowsingFolder,
 	}
 	go api.swagger()
 	return &api
@@ -180,5 +182,10 @@ func (api *API) swagger() {
 	router.HandleFunc("/versions", api.getAPIs).Methods("GET")
 	router.HandleFunc("/functions", api.getFunctions).Methods("GET")
 
-	log.Fatal(http.ListenAndServeTLS(api.apiIp+":"+api.apiPort, api.certificate, api.keyfile, router))
+	if api.browsingFolder != "" {
+		sh2 := http.StripPrefix("/", http.FileServer(http.Dir(api.browsingFolder)))
+		router.PathPrefix("/").Handler(sh2)
+	}
+
+	log.Fatal(http.ListenAndServeTLS(api.apiIP+":"+api.apiPort, api.certificate, api.keyfile, router))
 }
