@@ -140,6 +140,30 @@ func (s *Service) updateSensorConfig(cfg ds.SensorConf) {
 		setup.DumpFrequency = *cfg.DumpFrequency
 	}
 
+	if cfg.BleMode != nil {
+		setup.BleMode = cfg.BleMode
+	}
+
+	if cfg.IBeaconMajor != nil {
+		setup.IBeaconMajor = cfg.IBeaconMajor
+	}
+
+	if cfg.IBeaconMinor != nil {
+		setup.IBeaconMinor = cfg.IBeaconMinor
+	}
+
+	if cfg.IBeaconTxPower != nil {
+		setup.IBeaconTxPower = cfg.IBeaconTxPower
+	}
+
+	if cfg.IBeaconUUID != nil {
+		setup.IBeaconUUID = cfg.IBeaconUUID
+	}
+
+	if cfg.DumpFrequency != nil {
+		setup.DumpFrequency = *cfg.DumpFrequency
+	}
+
 	err := s.db.UpdateRecord(ds.DbConfig, ds.TableName, dbID, setup)
 	if err != nil {
 		rlog.Error("Error updating database" + err.Error())
