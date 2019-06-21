@@ -2,27 +2,28 @@ package database
 
 import (
 	"github.com/energieip/common-components-go/pkg/duser"
+	"github.com/energieip/common-components-go/pkg/pconst"
 )
 
 //SaveUserConfig dump user config in database
 func SaveUserConfig(db Database, cfg duser.UserAccess) error {
 	criteria := make(map[string]interface{})
 	criteria["UserHash"] = cfg.UserHash
-	return SaveOnUpdateObject(db, cfg, ConfigDB, AccessTable, criteria)
+	return SaveOnUpdateObject(db, cfg, pconst.DbConfig, AccessTable, criteria)
 }
 
 //RemoveUserConfig remove user config in database
 func RemoveUserConfig(db Database, userHash string) error {
 	criteria := make(map[string]interface{})
 	criteria["UserHash"] = userHash
-	return db.DeleteRecord(ConfigDB, AccessTable, criteria)
+	return db.DeleteRecord(pconst.DbConfig, AccessTable, criteria)
 }
 
 //GetUser retrive user from the database
 func GetUser(db Database, userHash string) *duser.UserAccess {
 	criteria := make(map[string]interface{})
 	criteria["UserHash"] = userHash
-	stored, err := db.GetRecord(ConfigDB, AccessTable, criteria)
+	stored, err := db.GetRecord(pconst.DbConfig, AccessTable, criteria)
 	if err != nil || stored == nil {
 		return nil
 	}
@@ -36,7 +37,7 @@ func GetUser(db Database, userHash string) *duser.UserAccess {
 //GetUserConfigs get user Config for a given group list
 func GetUserConfigs(db Database, groups map[int]bool) map[string]duser.UserAccess {
 	users := make(map[string]duser.UserAccess)
-	stored, err := db.FetchAllRecords(ConfigDB, AccessTable)
+	stored, err := db.FetchAllRecords(pconst.DbConfig, AccessTable)
 	if err != nil || stored == nil {
 		return users
 	}
@@ -62,17 +63,17 @@ func GetUserConfigs(db Database, groups map[int]bool) map[string]duser.UserAcces
 
 //SetUsersDump drop table before adding users
 func SetUsersDump(db Database, users map[string]duser.UserAccess) error {
-	err := db.DropTable(ConfigDB, AccessTable)
+	err := db.DropTable(pconst.DbConfig, AccessTable)
 	if err != nil {
 		return err
 	}
-	err = db.CreateTable(ConfigDB, AccessTable, &users)
+	err = db.CreateTable(pconst.DbConfig, AccessTable, &users)
 	if err != nil {
 		return err
 	}
 	var res error
 	for _, user := range users {
-		_, err = db.InsertRecord(ConfigDB, AccessTable, user)
+		_, err = db.InsertRecord(pconst.DbConfig, AccessTable, user)
 		if err != nil {
 			//best effort
 			res = err

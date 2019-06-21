@@ -5,6 +5,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/energieip/common-components-go/pkg/pconst"
+
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
 	"github.com/energieip/common-components-go/pkg/network"
 	"github.com/energieip/swh200-firmware-go/internal/database"
@@ -29,7 +31,7 @@ func (sensor SensorErrorEvent) ToJSON() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(inrec[:]), err
+	return string(inrec), err
 }
 
 //ToSensorErrorEvent convert interface to Sensor object
@@ -49,7 +51,7 @@ func (sensor SensorEvent) ToJSON() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return string(inrec[:]), err
+	return string(inrec), err
 }
 
 //ToSensorEvent convert interface to Sensor object
@@ -64,13 +66,13 @@ func ToSensorEvent(val interface{}) (*SensorEvent, error) {
 }
 
 func (s *Service) sendSensorSetup(sensor ds.SensorSetup) {
-	url := "/write/sensor/" + sensor.Mac + "/" + ds.UrlSetup
+	url := "/write/sensor/" + sensor.Mac + "/" + pconst.UrlSetup
 	dump, _ := sensor.ToJSON()
 	s.localSendCommand(url, dump)
 }
 
 func (s *Service) sendSensorUpdate(sensor ds.SensorConf) {
-	url := "/write/sensor/" + sensor.Mac + "/" + ds.UrlSetting
+	url := "/write/sensor/" + sensor.Mac + "/" + pconst.UrlSetting
 	dump, _ := sensor.ToJSON()
 	s.localSendCommand(url, dump)
 }
@@ -111,60 +113,8 @@ func (s *Service) updateSensorConfig(cfg ds.SensorConf) {
 	if setup == nil || dbID == "" {
 		return
 	}
-
-	if cfg.BrightnessCorrectionFactor != nil {
-		setup.BrightnessCorrectionFactor = cfg.BrightnessCorrectionFactor
-	}
-
-	if cfg.FriendlyName != nil {
-		setup.FriendlyName = cfg.FriendlyName
-	}
-
-	if cfg.Group != nil {
-		setup.Group = cfg.Group
-	}
-
-	if cfg.IsBleEnabled != nil {
-		setup.IsBleEnabled = cfg.IsBleEnabled
-	}
-
-	if cfg.TemperatureOffset != nil {
-		setup.TemperatureOffset = cfg.TemperatureOffset
-	}
-
-	if cfg.ThresholdPresence != nil {
-		setup.ThresholdPresence = cfg.ThresholdPresence
-	}
-
-	if cfg.DumpFrequency != nil {
-		setup.DumpFrequency = *cfg.DumpFrequency
-	}
-
-	if cfg.BleMode != nil {
-		setup.BleMode = cfg.BleMode
-	}
-
-	if cfg.IBeaconMajor != nil {
-		setup.IBeaconMajor = cfg.IBeaconMajor
-	}
-
-	if cfg.IBeaconMinor != nil {
-		setup.IBeaconMinor = cfg.IBeaconMinor
-	}
-
-	if cfg.IBeaconTxPower != nil {
-		setup.IBeaconTxPower = cfg.IBeaconTxPower
-	}
-
-	if cfg.IBeaconUUID != nil {
-		setup.IBeaconUUID = cfg.IBeaconUUID
-	}
-
-	if cfg.DumpFrequency != nil {
-		setup.DumpFrequency = *cfg.DumpFrequency
-	}
-
-	err := s.db.UpdateRecord(ds.DbConfig, ds.TableName, dbID, setup)
+	new := ds.UpdateConfig(cfg, *setup)
+	err := s.db.UpdateRecord(pconst.DbConfig, pconst.TbSensors, dbID, &new)
 	if err != nil {
 		rlog.Error("Error updating database" + err.Error())
 		return
@@ -178,7 +128,7 @@ func (s *Service) updateSensorConfig(cfg ds.SensorConf) {
 func (s *Service) removeSensor(mac string) {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
-	s.db.DeleteRecord(ds.DbConfig, ds.TableName, criteria)
+	s.db.DeleteRecord(pconst.DbConfig, pconst.TbSensors, criteria)
 	_, ok := s.sensors.Get(mac)
 	if ok {
 		isConfigured := false

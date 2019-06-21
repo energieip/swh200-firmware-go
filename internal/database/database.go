@@ -7,8 +7,8 @@ import (
 	"github.com/energieip/common-components-go/pkg/dhvac"
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
-	sd "github.com/energieip/common-components-go/pkg/dswitch"
 	"github.com/energieip/common-components-go/pkg/duser"
+	"github.com/energieip/common-components-go/pkg/pconst"
 	pkg "github.com/energieip/common-components-go/pkg/service"
 	"github.com/romana/rlog"
 )
@@ -16,7 +16,6 @@ import (
 type Database = database.DatabaseInterface
 
 const (
-	ConfigDB     = "config"
 	TableCluster = "clusters"
 	AccessTable  = "access"
 )
@@ -38,78 +37,53 @@ func ConnectDatabase(ip, port string) (Database, error) {
 		rlog.Error("Cannot connect to database " + err.Error())
 		return nil, err
 	}
-
-	for _, dbName := range []string{dl.DbConfig, dl.DbStatus} {
-		err = db.CreateDB(dbName)
-		if err != nil {
-			rlog.Warn("Create DB ", err.Error())
-		}
-
-		tableCfg := make(map[string]interface{})
-		if dbName == dl.DbConfig {
-			tableCfg[dl.TableName] = dl.LedSetup{}
-			tableCfg[ds.TableName] = ds.SensorSetup{}
-			tableCfg[gm.TableStatusName] = gm.GroupConfig{}
-			tableCfg[dblind.TableName] = dblind.BlindSetup{}
-			tableCfg[TableCluster] = pkg.Broker{}
-			tableCfg[dhvac.TableName] = dhvac.HvacSetup{}
-			tableCfg[AccessTable] = duser.UserAccess{}
-		} else {
-			tableCfg[dl.TableName] = dl.Led{}
-			tableCfg[ds.TableName] = ds.Sensor{}
-			tableCfg[gm.TableStatusName] = gm.GroupStatus{}
-			tableCfg[dblind.TableName] = dblind.Blind{}
-			tableCfg[dhvac.TableName] = dhvac.Hvac{}
-		}
-		for tableName, objs := range tableCfg {
-			err = db.CreateTable(dbName, tableName, &objs)
-			if err != nil {
-				rlog.Warn("Create table ", err.Error())
-			}
-		}
-	}
-
+	prepareDB(db, false)
 	return db, nil
 }
 
-func ResetDB(db Database) error {
-	var res error
-	for _, dbName := range []string{dl.DbConfig, dl.DbStatus} {
+func prepareDB(db Database, withDrop bool) {
+	for _, dbName := range []string{pconst.DbConfig, pconst.DbStatus} {
 		err := db.CreateDB(dbName)
 		if err != nil {
 			rlog.Warn("Create DB ", err.Error())
-			res = err
 		}
 
 		tableCfg := make(map[string]interface{})
-		if dbName == dl.DbConfig {
-			tableCfg[dl.TableName] = dl.LedSetup{}
-			tableCfg[ds.TableName] = ds.SensorSetup{}
-			tableCfg[gm.TableStatusName] = gm.GroupConfig{}
-			tableCfg[dblind.TableName] = dblind.BlindSetup{}
-			tableCfg[dhvac.TableName] = dhvac.HvacSetup{}
-			tableCfg[TableCluster] = sd.SwitchCluster{}
+		if dbName == pconst.DbConfig {
+			tableCfg[pconst.TbLeds] = dl.LedSetup{}
+			tableCfg[pconst.TbSensors] = ds.SensorSetup{}
+			tableCfg[pconst.TbGroups] = gm.GroupConfig{}
+			tableCfg[pconst.TbBlinds] = dblind.BlindSetup{}
+			tableCfg[TableCluster] = pkg.Broker{}
+			tableCfg[pconst.TbHvacs] = dhvac.HvacSetup{}
 			tableCfg[AccessTable] = duser.UserAccess{}
 		} else {
-			tableCfg[dl.TableName] = dl.Led{}
-			tableCfg[ds.TableName] = ds.Sensor{}
-			tableCfg[gm.TableStatusName] = gm.GroupStatus{}
-			tableCfg[dblind.TableName] = dblind.Blind{}
-			tableCfg[dhvac.TableName] = dhvac.Hvac{}
+			tableCfg[pconst.TbLeds] = dl.Led{}
+			tableCfg[pconst.TbSensors] = ds.Sensor{}
+			tableCfg[pconst.TbGroups] = gm.GroupStatus{}
+			tableCfg[pconst.TbBlinds] = dblind.Blind{}
+			tableCfg[pconst.TbHvacs] = dhvac.Hvac{}
 		}
 		for tableName, objs := range tableCfg {
-			err = db.DropTable(dbName, tableName)
-			if err != nil {
-				rlog.Warn("Cannot drop table ", err.Error())
-				continue
+			if withDrop {
+				err = db.DropTable(dbName, tableName)
+				if err != nil {
+					rlog.Warn("Cannot drop table ", err.Error())
+					continue
+				}
 			}
 			err = db.CreateTable(dbName, tableName, &objs)
 			if err != nil {
 				rlog.Warn("Create table ", err.Error())
-				res = err
 			}
 		}
 	}
+
+}
+
+func ResetDB(db Database) error {
+	prepareDB(db, true)
+	var res error
 	return res
 }
 

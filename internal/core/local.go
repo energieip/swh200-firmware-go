@@ -1,10 +1,8 @@
 package core
 
 import (
-	"github.com/energieip/common-components-go/pkg/dblind"
-	dl "github.com/energieip/common-components-go/pkg/dled"
-	ds "github.com/energieip/common-components-go/pkg/dsensor"
 	genericNetwork "github.com/energieip/common-components-go/pkg/network"
+	"github.com/energieip/common-components-go/pkg/pconst"
 	"github.com/romana/rlog"
 )
 
@@ -29,12 +27,12 @@ func (s *Service) createLocalNetwork() error {
 func (s *Service) localConnection() error {
 	cbkLocal := make(map[string]func(genericNetwork.Client, genericNetwork.Message))
 	cbkLocal["/write/switch/commands"] = s.onSwitchCmd
-	cbkLocal["/read/led/+/"+dl.UrlHello] = s.onLedHello
-	cbkLocal["/read/led/+/"+dl.UrlStatus] = s.onLedStatus
-	cbkLocal["/read/sensor/+/"+ds.UrlHello] = s.onSensorHello
-	cbkLocal["/read/sensor/+/"+ds.UrlStatus] = s.onSensorStatus
-	cbkLocal["/read/blind/+/"+dblind.UrlHello] = s.onBlindHello
-	cbkLocal["/read/blind/+/"+dblind.UrlStatus] = s.onBlindStatus
+	cbkLocal["/read/led/+/"+pconst.UrlHello] = s.onLedHello
+	cbkLocal["/read/led/+/"+pconst.UrlStatus] = s.onLedStatus
+	cbkLocal["/read/sensor/+/"+pconst.UrlHello] = s.onSensorHello
+	cbkLocal["/read/sensor/+/"+pconst.UrlStatus] = s.onSensorStatus
+	cbkLocal["/read/blind/+/"+pconst.UrlHello] = s.onBlindHello
+	cbkLocal["/read/blind/+/"+pconst.UrlStatus] = s.onBlindStatus
 	cbkLocal["/read/group/+/events/sensor"] = s.onGroupSensorEvent
 	cbkLocal["/read/group/+/error/sensor"] = s.onGroupErrorEvent
 	cbkLocal["/read/group/+/events/blind"] = s.onGroupBlindEvent

@@ -1,13 +1,13 @@
 package database
 
 import (
-	dl "github.com/energieip/common-components-go/pkg/dled"
 	sd "github.com/energieip/common-components-go/pkg/dswitch"
+	"github.com/energieip/common-components-go/pkg/pconst"
 )
 
 func GetClusterConfig(db Database) []sd.SwitchCluster {
 	var cluster []sd.SwitchCluster
-	stored, err := db.FetchAllRecords(dl.DbConfig, TableCluster)
+	stored, err := db.FetchAllRecords(pconst.DbConfig, TableCluster)
 	if err != nil || stored == nil {
 		return cluster
 	}
@@ -25,7 +25,7 @@ func GetClusterConfig(db Database) []sd.SwitchCluster {
 func RemoveClusterConfig(db Database, cluster string) error {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = cluster
-	return db.DeleteRecord(dl.DbConfig, TableCluster, criteria)
+	return db.DeleteRecord(pconst.DbConfig, TableCluster, criteria)
 }
 
 func UpdateClusterConfig(db Database, cluster map[string]sd.SwitchCluster) error {
@@ -33,13 +33,7 @@ func UpdateClusterConfig(db Database, cluster map[string]sd.SwitchCluster) error
 	for name, elt := range cluster {
 		criteria := make(map[string]interface{})
 		criteria["Mac"] = name
-		var err error
-		dbID := GetObjectID(db, dl.DbConfig, TableCluster, criteria)
-		if dbID == "" {
-			_, err = db.InsertRecord(dl.DbConfig, TableCluster, elt)
-		} else {
-			err = db.UpdateRecord(dl.DbConfig, TableCluster, dbID, elt)
-		}
+		err := SaveOnUpdateObject(db, elt, pconst.DbConfig, TableCluster, criteria)
 		if err != nil {
 			res = err
 		}

@@ -39,6 +39,8 @@ type Service struct {
 	cluster               map[string]ClusterNetwork //Share broker in the cluster
 	db                    database.Database
 	mac                   string //Switch mac address
+	fullMac               string
+	label                 string
 	events                chan string
 	timerDump             time.Duration //in seconds
 	ip                    string
@@ -81,6 +83,7 @@ func (s *Service) Initialize(confFile string) error {
 
 	mac, ip := tools.GetNetworkInfo()
 	s.ip = ip
+	s.fullMac = mac
 	s.mac = strings.ToUpper(mac[9:])
 	s.services = make(map[string]pkg.Service)
 
@@ -157,6 +160,8 @@ func (s *Service) sendHello() {
 
 	switchDump := sd.Switch{
 		Mac:           s.mac,
+		FullMac:       s.fullMac,
+		Label:         &s.label,
 		IP:            s.ip,
 		IsConfigured:  &s.isConfigured,
 		Protocol:      "MQTTS",
@@ -180,6 +185,8 @@ func (s *Service) sendHello() {
 func (s *Service) sendDump() {
 	status := sd.SwitchStatus{}
 	status.Mac = s.mac
+	status.FullMac = s.fullMac
+	status.Label = &s.label
 	status.Protocol = "MQTTS"
 	status.IP = s.ip
 	status.IsConfigured = &s.isConfigured
@@ -488,12 +495,18 @@ func (s *Service) Run() error {
 						continue
 					}
 					s.friendlyName = event.FriendlyName
+					if event.Label != nil {
+						s.label = *event.Label
+					}
 					s.updateConfiguration(event)
 					s.isConfigured = true
 
 				case EventServerSetup:
 					s.isConfigured = true
 					s.friendlyName = event.FriendlyName
+					if event.Label != nil {
+						s.label = *event.Label
+					}
 					// s.systemUpdate(event)
 					// s.packagesInstall(event)
 					s.updateConfiguration(event)

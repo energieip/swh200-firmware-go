@@ -7,6 +7,7 @@ import (
 
 	"github.com/energieip/common-components-go/pkg/dblind"
 	"github.com/energieip/common-components-go/pkg/network"
+	"github.com/energieip/common-components-go/pkg/pconst"
 	"github.com/energieip/swh200-firmware-go/internal/database"
 	"github.com/romana/rlog"
 )
@@ -62,13 +63,13 @@ func ToBlindEvent(val interface{}) (*BlindEvent, error) {
 }
 
 func (s *Service) sendBlindSetup(driver dblind.BlindSetup) {
-	url := "/write/blind/" + driver.Mac + "/" + dblind.UrlSetup
+	url := "/write/blind/" + driver.Mac + "/" + pconst.UrlSetup
 	dump, _ := driver.ToJSON()
 	s.localSendCommand(url, dump)
 }
 
 func (s *Service) sendBlindUpdate(driver dblind.BlindConf) {
-	url := "/write/blind/" + driver.Mac + "/" + dblind.UrlSetting
+	url := "/write/blind/" + driver.Mac + "/" + pconst.UrlSetting
 	dump, _ := driver.ToJSON()
 	s.localSendCommand(url, dump)
 }
@@ -96,7 +97,7 @@ func (s *Service) sendBlindGroupSetpoint(mac string, blind *int, slat *int) {
 func (s *Service) removeBlind(mac string) {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
-	s.db.DeleteRecord(dblind.DbConfig, dblind.TableName, criteria)
+	s.db.DeleteRecord(pconst.DbConfig, pconst.TbBlinds, criteria)
 	_, ok := s.blinds.Get(mac)
 	if !ok {
 		return
@@ -149,48 +150,8 @@ func (s *Service) updateBlindConfig(cfg dblind.BlindConf) {
 	if setup == nil || dbID == "" {
 		return
 	}
-
-	if cfg.FriendlyName != nil {
-		setup.FriendlyName = cfg.FriendlyName
-	}
-
-	if cfg.Group != nil {
-		setup.Group = cfg.Group
-	}
-
-	if cfg.IsBleEnabled != nil {
-		setup.IsBleEnabled = cfg.IsBleEnabled
-	}
-
-	if cfg.DumpFrequency != nil {
-		setup.DumpFrequency = *cfg.DumpFrequency
-	}
-
-	if cfg.BleMode != nil {
-		setup.BleMode = cfg.BleMode
-	}
-
-	if cfg.IBeaconMajor != nil {
-		setup.IBeaconMajor = cfg.IBeaconMajor
-	}
-
-	if cfg.IBeaconMinor != nil {
-		setup.IBeaconMinor = cfg.IBeaconMinor
-	}
-
-	if cfg.IBeaconTxPower != nil {
-		setup.IBeaconTxPower = cfg.IBeaconTxPower
-	}
-
-	if cfg.IBeaconUUID != nil {
-		setup.IBeaconUUID = cfg.IBeaconUUID
-	}
-
-	if cfg.DumpFrequency != nil {
-		setup.DumpFrequency = *cfg.DumpFrequency
-	}
-
-	err := s.db.UpdateRecord(dblind.DbConfig, dblind.TableName, dbID, setup)
+	new := dblind.UpdateConfig(cfg, *setup)
+	err := s.db.UpdateRecord(pconst.DbConfig, pconst.TbBlinds, dbID, &new)
 	if err != nil {
 		rlog.Error("Cannot update database" + err.Error())
 		return

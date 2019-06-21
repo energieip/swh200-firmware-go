@@ -6,7 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/energieip/common-components-go/pkg/dblind"
+	"github.com/energieip/common-components-go/pkg/pconst"
+
 	"github.com/energieip/swh200-firmware-go/internal/database"
 
 	"github.com/energieip/common-components-go/pkg/dgroup"
@@ -672,8 +673,8 @@ func (s *Service) deleteGroup(group gm.GroupConfig) {
 
 	gr, _ := s.groups[group.Group]
 	if gr.DbID != "" {
-		s.db.DeleteRecord(gm.DbStatusName, gm.TableStatusName, gr)
-		s.db.DeleteRecord(dblind.DbConfig, gm.TableStatusName, gr)
+		s.db.DeleteRecord(pconst.DbStatus, pconst.TbGroups, gr)
+		s.db.DeleteRecord(pconst.DbConfig, pconst.TbGroups, gr)
 	}
 	delete(s.groups, group.Group)
 }

@@ -4,21 +4,21 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/energieip/common-components-go/pkg/dblind"
 	"github.com/energieip/common-components-go/pkg/dhvac"
 	"github.com/energieip/common-components-go/pkg/network"
+	"github.com/energieip/common-components-go/pkg/pconst"
 	"github.com/energieip/swh200-firmware-go/internal/database"
 	"github.com/romana/rlog"
 )
 
 func (s *Service) sendHvacSetup(driver dhvac.HvacSetup) {
-	url := "/write/hvac/" + driver.Mac + "/" + dhvac.UrlSetup
+	url := "/write/hvac/" + driver.Mac + "/" + pconst.UrlSetup
 	dump, _ := driver.ToJSON()
 	s.localSendCommand(url, dump)
 }
 
 func (s *Service) sendHvacUpdate(driver dhvac.HvacConf) {
-	url := "/write/hvac/" + driver.Mac + "/" + dhvac.UrlSetting
+	url := "/write/hvac/" + driver.Mac + "/" + pconst.UrlSetting
 	dump, _ := driver.ToJSON()
 	s.localSendCommand(url, dump)
 }
@@ -39,7 +39,7 @@ func (s *Service) sendHvacGroupSetpoint(mac string, temperatureOffset *int) {
 func (s *Service) removeHvac(mac string) {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
-	s.db.DeleteRecord(dhvac.DbConfig, dhvac.TableName, criteria)
+	s.db.DeleteRecord(pconst.DbConfig, pconst.TbHvacs, criteria)
 	_, ok := s.hvacs.Get(mac)
 	if !ok {
 		return
@@ -67,12 +67,7 @@ func (s *Service) updateHvacStatus(driver dhvac.Hvac) error {
 	// Check if the serial already exist in database (case restart process)
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = driver.Mac
-	dbID := database.GetObjectID(s.db, dhvac.DbStatus, dhvac.TableName, criteria)
-	if dbID == "" {
-		_, err = s.db.InsertRecord(dhvac.DbStatus, dhvac.TableName, driver)
-	} else {
-		err = s.db.UpdateRecord(dhvac.DbStatus, dhvac.TableName, dbID, driver)
-	}
+	err = database.SaveOnUpdateObject(s.db, driver, pconst.DbStatus, pconst.TbHvacs, criteria)
 	if err == nil {
 		s.hvacs.Set(driver.Mac, driver)
 	}
@@ -98,20 +93,8 @@ func (s *Service) updateHvacConfig(cfg dhvac.HvacConf) {
 	if setup == nil || dbID == "" {
 		return
 	}
-
-	if cfg.FriendlyName != nil {
-		setup.FriendlyName = cfg.FriendlyName
-	}
-
-	if cfg.Group != nil {
-		setup.Group = cfg.Group
-	}
-
-	if cfg.DumpFrequency != nil {
-		setup.DumpFrequency = *cfg.DumpFrequency
-	}
-
-	err := s.db.UpdateRecord(dblind.DbConfig, dblind.TableName, dbID, setup)
+	new := dhvac.UpdateConfig(cfg, *setup)
+	err := s.db.UpdateRecord(pconst.DbConfig, pconst.TbHvacs, dbID, &new)
 	if err != nil {
 		rlog.Error("Cannot update database" + err.Error())
 		return

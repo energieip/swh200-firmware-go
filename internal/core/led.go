@@ -6,12 +6,13 @@ import (
 
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	"github.com/energieip/common-components-go/pkg/network"
+	"github.com/energieip/common-components-go/pkg/pconst"
 	"github.com/energieip/swh200-firmware-go/internal/database"
 	"github.com/romana/rlog"
 )
 
 func (s *Service) sendLedSetup(led dl.LedSetup) {
-	url := "/write/led/" + led.Mac + "/" + dl.UrlSetup
+	url := "/write/led/" + led.Mac + "/" + pconst.UrlSetup
 	dump, _ := led.ToJSON()
 	s.localSendCommand(url, dump)
 	if led.Auto != nil {
@@ -37,7 +38,7 @@ func (s *Service) sendLedSetup(led dl.LedSetup) {
 }
 
 func (s *Service) sendLedUpdate(led dl.LedConf) {
-	url := "/write/led/" + led.Mac + "/" + dl.UrlSetting
+	url := "/write/led/" + led.Mac + "/" + pconst.UrlSetting
 	dump, _ := led.ToJSON()
 	s.localSendCommand(url, dump)
 
@@ -80,7 +81,7 @@ func (s *Service) sendLedGroupSetpoint(mac string, setpoint int, slopeStart int,
 func (s *Service) removeLed(mac string) {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
-	s.db.DeleteRecord(dl.DbConfig, dl.TableName, criteria)
+	s.db.DeleteRecord(pconst.DbConfig, pconst.TbLeds, criteria)
 	_, ok := s.ledsToAuto[mac]
 	if ok {
 		delete(s.ledsToAuto, mac)
@@ -138,71 +139,8 @@ func (s *Service) updateLedConfig(config dl.LedConf) {
 		return
 	}
 
-	if config.ThresholdHigh != nil {
-		setup.ThresholdHigh = config.ThresholdHigh
-	}
-
-	if config.ThresholdLow != nil {
-		setup.ThresholdLow = config.ThresholdLow
-	}
-
-	if config.FriendlyName != nil {
-		setup.FriendlyName = config.FriendlyName
-	}
-
-	if config.Group != nil {
-		setup.Group = config.Group
-	}
-
-	if config.IsBleEnabled != nil {
-		setup.IsBleEnabled = config.IsBleEnabled
-	}
-
-	if config.SlopeStartAuto != nil {
-		setup.SlopeStartAuto = config.SlopeStartAuto
-	}
-
-	if config.SlopeStartManual != nil {
-		setup.SlopeStartManual = config.SlopeStartManual
-	}
-
-	if config.SlopeStopAuto != nil {
-		setup.SlopeStopAuto = config.SlopeStopAuto
-	}
-
-	if config.SlopeStopManual != nil {
-		setup.SlopeStopManual = config.SlopeStopManual
-	}
-
-	if config.BleMode != nil {
-		setup.BleMode = config.BleMode
-	}
-
-	if config.IBeaconMajor != nil {
-		setup.IBeaconMajor = config.IBeaconMajor
-	}
-
-	if config.IBeaconMinor != nil {
-		setup.IBeaconMinor = config.IBeaconMinor
-	}
-
-	if config.IBeaconTxPower != nil {
-		setup.IBeaconTxPower = config.IBeaconTxPower
-	}
-
-	if config.IBeaconUUID != nil {
-		setup.IBeaconUUID = config.IBeaconUUID
-	}
-
-	if config.DumpFrequency != nil {
-		setup.DumpFrequency = *config.DumpFrequency
-	}
-
-	if config.Watchdog != nil {
-		setup.Watchdog = config.Watchdog
-	}
-
-	err := s.db.UpdateRecord(dl.DbConfig, dl.TableName, dbID, setup)
+	new := dl.UpdateConfig(config, *setup)
+	err := s.db.UpdateRecord(pconst.DbConfig, pconst.TbLeds, dbID, &new)
 	if err != nil {
 		rlog.Error("Error updating database " + err.Error())
 		return
