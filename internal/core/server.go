@@ -42,15 +42,14 @@ func (s *Service) remoteServerConnection() error {
 	cbkServer["/remove/switch/"+s.mac+"/update/settings"] = s.onRemoveSetting
 
 	confServer := genericNetwork.NetworkConfig{
-		IP:         s.conf.NetworkBroker.IP,
-		Port:       s.conf.NetworkBroker.Port,
-		ClientName: s.clientID,
-		Callbacks:  cbkServer,
-		LogLevel:   s.conf.LogLevel,
-		User:       s.conf.NetworkBroker.Login,
-		Password:   s.conf.NetworkBroker.Password,
-		Secure:     s.conf.NetworkBroker.Secure,
-		CaPath:     s.conf.NetworkBroker.CaPath,
+		IP:        s.conf.NetworkBroker.IP,
+		Port:      s.conf.NetworkBroker.Port,
+		Callbacks: cbkServer,
+		LogLevel:  s.conf.LogLevel,
+		User:      s.conf.NetworkBroker.Login,
+		Password:  s.conf.NetworkBroker.Password,
+		Secure:    s.conf.NetworkBroker.Secure,
+		CaPath:    s.conf.NetworkBroker.CaPath,
 	}
 
 	for {

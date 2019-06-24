@@ -27,15 +27,14 @@ func (s *Service) createClusterNetwork() (ClusterNetwork, error) {
 func (s *Service) remoteClusterConnection(ip string, client ClusterNetwork) error {
 	cbkServer := make(map[string]func(genericNetwork.Client, genericNetwork.Message))
 	confServer := genericNetwork.NetworkConfig{
-		IP:         ip,
-		Port:       s.conf.NetworkBroker.Port,
-		ClientName: s.clientID + "cluster",
-		Callbacks:  cbkServer,
-		LogLevel:   s.conf.LogLevel,
-		User:       s.conf.NetworkBroker.Login,
-		Password:   s.conf.NetworkBroker.Password,
-		CaPath:     s.conf.NetworkBroker.CaPath,
-		Secure:     s.conf.NetworkBroker.Secure,
+		IP:        ip,
+		Port:      s.conf.NetworkBroker.Port,
+		Callbacks: cbkServer,
+		LogLevel:  s.conf.LogLevel,
+		User:      s.conf.NetworkBroker.Login,
+		Password:  s.conf.NetworkBroker.Password,
+		CaPath:    s.conf.NetworkBroker.CaPath,
+		Secure:    s.conf.NetworkBroker.Secure,
 	}
 
 	for {

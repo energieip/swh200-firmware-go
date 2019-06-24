@@ -62,8 +62,6 @@ type Service struct {
 
 //Initialize service
 func (s *Service) Initialize(confFile string) error {
-	hostname, _ := os.Hostname()
-	s.clientID = "Switch" + hostname
 	s.events = make(chan string)
 	s.leds = cmap.New()
 	s.ledsToAuto = make(map[string]*int)
