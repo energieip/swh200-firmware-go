@@ -120,12 +120,13 @@ func (s *Service) onHvacHello(client network.Client, msg network.Message) {
 
 	driver.IsConfigured = false
 	driver.SwitchMac = s.mac
+
 	err = s.updateHvacStatus(driver)
 	if err != nil {
 		rlog.Error("Error during database update ", err.Error())
 		return
 	}
-	rlog.Debug("New Blind driver stored on database " + driver.Mac)
+	rlog.Debug("New Hvac driver stored on database " + driver.Mac)
 
 	cfg := database.GetConfigHvac(s.db, driver.Mac)
 	if cfg != nil {
@@ -135,7 +136,7 @@ func (s *Service) onHvacHello(client network.Client, msg network.Message) {
 
 func (s *Service) onHvacStatus(client network.Client, msg network.Message) {
 	topic := msg.Topic()
-	rlog.Debug(topic + " : " + string(msg.Payload()))
+	rlog.Info(topic + " : " + string(msg.Payload()))
 	var driver dhvac.Hvac
 	err := json.Unmarshal(msg.Payload(), &driver)
 	if err != nil {
@@ -144,8 +145,10 @@ func (s *Service) onHvacStatus(client network.Client, msg network.Message) {
 	}
 	s.driversSeen.Set(driver.Mac, time.Now().UTC())
 	driver.SwitchMac = s.mac
+
 	err = s.updateHvacStatus(driver)
 	if err != nil {
 		rlog.Error("Error during database update ", err.Error())
+		return
 	}
 }
