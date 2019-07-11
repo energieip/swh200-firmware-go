@@ -491,6 +491,7 @@ func (s *Service) Run() error {
 							for _, group := range s.groups {
 								s.deleteGroup(group.Runtime)
 							}
+							s.label = ""
 							s.leds = cmap.New()
 							s.ledsToAuto = make(map[string]*int)
 							s.sensors = cmap.New()
