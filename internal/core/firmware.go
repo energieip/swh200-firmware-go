@@ -38,6 +38,7 @@ type Service struct {
 	local                 LocalNetwork              //local broker for drivers and services
 	cluster               map[string]ClusterNetwork //Share broker in the cluster
 	clusterID             int
+	profil                string
 	db                    database.Database
 	mac                   string //Switch mac address
 	fullMac               string
@@ -192,6 +193,7 @@ func (s *Service) sendDump() {
 	status.Cluster = s.clusterID
 	status.FullMac = s.fullMac
 	status.Label = &s.label
+	status.Profil = s.profil
 	status.Protocol = "MQTTS"
 	status.IP = s.ip
 	status.IsConfigured = &s.isConfigured
@@ -494,6 +496,7 @@ func (s *Service) Run() error {
 								s.deleteGroup(group.Runtime)
 							}
 							s.label = ""
+							s.profil = "none"
 							s.leds = cmap.New()
 							s.ledsToAuto = make(map[string]*int)
 							s.sensors = cmap.New()
@@ -518,6 +521,9 @@ func (s *Service) Run() error {
 					if event.Cluster != nil {
 						s.clusterID = *event.Cluster
 					}
+					if event.Profil != "" {
+						s.profil = event.Profil
+					}
 					s.updateConfiguration(event)
 					s.isConfigured = true
 
@@ -526,6 +532,9 @@ func (s *Service) Run() error {
 					s.friendlyName = event.FriendlyName
 					if event.Label != nil {
 						s.label = *event.Label
+					}
+					if event.Profil != "" {
+						s.profil = event.Profil
 					}
 					if event.Cluster != nil {
 						s.clusterID = *event.Cluster
