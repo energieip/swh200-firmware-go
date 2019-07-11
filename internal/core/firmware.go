@@ -181,6 +181,11 @@ func (s *Service) sendHello() {
 }
 
 func (s *Service) sendDump() {
+	ledsPower := int64(0)
+	blindsPower := int64(0)
+	hvacsPower := int64(0)
+	totalPower := int64(0)
+
 	status := sd.SwitchStatus{}
 	status.Mac = s.mac
 	status.FullMac = s.fullMac
@@ -224,6 +229,8 @@ func (s *Service) sendDump() {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
 				dumpLeds[driver.Mac] = driver
+				ledsPower += int64(driver.LinePower)
+				totalPower += int64(driver.LinePower)
 				continue
 			} else {
 				rlog.Warn("LED " + driver.Mac + " no longer seen; drop it")
@@ -273,6 +280,8 @@ func (s *Service) sendDump() {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
 				dumpBlinds[driver.Mac] = driver
+				blindsPower += int64(driver.LinePower)
+				totalPower += int64(driver.LinePower)
 				continue
 			} else {
 				rlog.Warn("Blind " + driver.Mac + " no longer seen; drop it")
@@ -296,6 +305,8 @@ func (s *Service) sendDump() {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
 				dumpHvacs[driver.Mac] = driver
+				hvacsPower += int64(driver.LinePower)
+				totalPower += int64(driver.LinePower)
 				continue
 			} else {
 				rlog.Warn("HVAC " + driver.Mac + " no longer seen; drop it")
@@ -312,6 +323,10 @@ func (s *Service) sendDump() {
 	}
 	status.Hvacs = dumpHvacs
 	status.Groups = database.GetStatusGroup(s.db)
+	status.BlindsPower = blindsPower
+	status.HvacsPower = hvacsPower
+	status.LedsPower = ledsPower
+	status.TotalPower = totalPower
 
 	dump, _ := status.ToJSON()
 	s.serverSendCommand("/read/switch/"+s.mac+"/"+UrlStatus, dump)

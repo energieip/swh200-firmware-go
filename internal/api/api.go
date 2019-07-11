@@ -108,6 +108,11 @@ func (api *API) getV1Consumptions(w http.ResponseWriter, req *http.Request) {
 		leds += driver.LinePower
 	}
 
+	for _, driver := range database.GetStatusHvacs(api.db) {
+		power += driver.LinePower
+		hvacs += driver.LinePower
+	}
+
 	conso := APIV1SwitchConsumptions{
 		TotalPower:    power,
 		LightingPower: leds,
