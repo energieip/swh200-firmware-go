@@ -9,10 +9,11 @@ import (
 )
 
 type SwitchCmd struct {
-	Group  int  `json:"group"`
-	Leds   *int `json:"leds,omitempty"`
-	Slats  *int `json:"slats,omitempty"`
-	Blinds *int `json:"blinds,omitempty"`
+	Group     int  `json:"group"`
+	Leds      *int `json:"leds,omitempty"`
+	Slats     *int `json:"slats,omitempty"`
+	Blinds    *int `json:"blinds,omitempty"`
+	TempShift *int `json:"heat,omitempty"` //temperature shift in 1/10°C
 }
 
 func (s *Service) onSwitchCmd(client network.Client, msg network.Message) {

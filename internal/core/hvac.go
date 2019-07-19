@@ -30,9 +30,9 @@ func (s *Service) sendHvacGroupSetpoint(mac string, temperatureOffset *int) {
 		return
 	}
 	conf := dhvac.HvacConf{
-		Mac: mac,
+		Mac:   mac,
+		Shift: temperatureOffset,
 	}
-	//TODO!!!
 	s.sendHvacUpdate(conf)
 }
 

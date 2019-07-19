@@ -22,6 +22,7 @@ const (
 	EventStop   = "stop"
 	EventManual = "manual"
 	EventBlind  = "blind"
+	EventHvac   = "hvac"
 )
 
 // Group logical
@@ -46,6 +47,7 @@ type Group struct {
 	FirstDay           cmap.ConcurrentMap
 	SetpointBlinds     *int
 	SetpointSlatBlinds *int
+	ShiftTemp          *int //in 1/10°C
 	LastPresenceStatus bool
 	Counter            int
 	Temperature        int
@@ -259,6 +261,9 @@ func (s *Service) groupRun(group *Group) error {
 					case EventBlind:
 						rlog.Info("Received blind event ", group)
 						s.setpointBlind(group, group.SetpointBlinds, group.SetpointSlatBlinds)
+					case EventHvac:
+						rlog.Info("Received HVAC event ", group)
+						s.setpointHvac(group, group.ShiftTemp)
 					}
 				}
 			case <-ticker.C:
@@ -623,6 +628,12 @@ func (s *Service) setpointBlind(group *Group, blind *int, slat *int) {
 	}
 }
 
+func (s *Service) setpointHvac(group *Group, shift *int) {
+	for _, driver := range group.Runtime.Hvacs {
+		s.sendHvacGroupSetpoint(driver, shift)
+	}
+}
+
 func (s *Service) createGroup(runtime gm.GroupConfig) {
 	if runtime.Auto == nil {
 		auto := true
@@ -720,6 +731,15 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 			gr.SetpointBlinds = new.SetpointBlinds
 			event := make(map[string]*gm.GroupConfig)
 			event[EventBlind] = new
+			gr.Event <- event
+		}()
+	}
+
+	if new.SetpointTempOffset != nil {
+		go func() {
+			gr.ShiftTemp = new.SetpointTempOffset
+			event := make(map[string]*gm.GroupConfig)
+			event[EventHvac] = new
 			gr.Event <- event
 		}()
 	}
@@ -852,6 +872,7 @@ func (s *Service) onGroupCommand(client network.Client, msg network.Message) {
 		SetpointLeds:       cmd.Leds,
 		SetpointSlatBlinds: cmd.Slats,
 		SetpointBlinds:     cmd.Blinds,
+		SetpointTempOffset: cmd.TempShift,
 	}
 	if cmd.Leds != nil {
 		auto := false
