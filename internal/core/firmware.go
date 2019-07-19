@@ -3,7 +3,6 @@ package core
 import (
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/energieip/swh200-firmware-go/internal/api"
@@ -41,7 +40,6 @@ type Service struct {
 	profil                string
 	db                    database.Database
 	mac                   string //Switch mac address
-	fullMac               string
 	label                 string
 	events                chan string
 	timerDump             time.Duration //in seconds
@@ -83,8 +81,7 @@ func (s *Service) Initialize(confFile string) error {
 
 	mac, ip := tools.GetNetworkInfo()
 	s.ip = ip
-	s.fullMac = mac
-	s.mac = strings.ToUpper(mac[9:])
+	s.mac = mac
 	s.services = make(map[string]pkg.Service)
 
 	os.Setenv("RLOG_LOG_LEVEL", conf.LogLevel)
@@ -160,7 +157,6 @@ func (s *Service) sendHello() {
 
 	switchDump := sd.Switch{
 		Mac:           s.mac,
-		FullMac:       s.fullMac,
 		Label:         &s.label,
 		IP:            s.ip,
 		IsConfigured:  &s.isConfigured,
@@ -191,7 +187,6 @@ func (s *Service) sendDump() {
 	status := sd.SwitchStatus{}
 	status.Mac = s.mac
 	status.Cluster = s.clusterID
-	status.FullMac = s.fullMac
 	status.Label = &s.label
 	status.Profil = s.profil
 	status.Protocol = "MQTTS"
