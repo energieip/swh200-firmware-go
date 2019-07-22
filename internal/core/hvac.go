@@ -136,7 +136,7 @@ func (s *Service) onHvacHello(client network.Client, msg network.Message) {
 
 func (s *Service) onHvacStatus(client network.Client, msg network.Message) {
 	topic := msg.Topic()
-	rlog.Info(topic + " : " + string(msg.Payload()))
+	rlog.Debug(topic + " : " + string(msg.Payload()))
 	var driver dhvac.Hvac
 	err := json.Unmarshal(msg.Payload(), &driver)
 	if err != nil {

@@ -194,8 +194,13 @@ func (s *Service) onLedStatus(client network.Client, msg network.Message) {
 		led.TimeToAuto = *val
 	}
 	cfg := database.GetConfigLed(s.db, led.Mac)
-	if cfg != nil && cfg.Watchdog != nil {
-		led.Watchdog = *cfg.Watchdog
+	if cfg != nil {
+		if cfg.Watchdog != nil {
+			led.Watchdog = *cfg.Watchdog
+		}
+		if cfg.FirstDay != nil {
+			led.FirstDay = *cfg.FirstDay
+		}
 	}
 
 	err = s.updateLedStatus(led)
