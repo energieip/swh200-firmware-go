@@ -145,9 +145,12 @@ func (s *Service) updateLedConfig(config dl.LedConf) {
 		rlog.Error("Error updating database " + err.Error())
 		return
 	}
-	_, ok := s.leds.Get(config.Mac)
+	l, ok := s.leds.Get(config.Mac)
 	if ok {
-		s.sendLedUpdate(config)
+		light := l.(dl.Led)
+		if light.IsConfigured {
+			s.sendLedUpdate(config)
+		}
 	}
 }
 
