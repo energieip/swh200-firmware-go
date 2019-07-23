@@ -39,6 +39,8 @@ func (s *Service) localConnection() error {
 	cbkLocal["/read/group/+/error/sensor"] = s.onGroupErrorEvent
 	cbkLocal["/read/group/+/events/blind"] = s.onGroupBlindEvent
 	cbkLocal["/read/group/+/error/blind"] = s.onGroupBlindErrorEvent
+	cbkLocal["/read/group/+/events/nano"] = s.onGroupNanoEvent
+	cbkLocal["/read/group/+/error/nano"] = s.onGroupNanoErrorEvent
 	cbkLocal["/write/group/+/commands"] = s.onGroupCommand
 
 	confLocal := genericNetwork.NetworkConfig{

@@ -53,6 +53,7 @@ type Service struct {
 	sensors               cmap.ConcurrentMap
 	groups                map[int]Group
 	blinds                cmap.ConcurrentMap
+	nanos                 cmap.ConcurrentMap
 	hvacs                 cmap.ConcurrentMap
 	conf                  pkg.ServiceConfig
 	clientID              string
@@ -68,6 +69,7 @@ func (s *Service) Initialize(confFile string) error {
 	s.sensors = cmap.New()
 	s.blinds = cmap.New()
 	s.hvacs = cmap.New()
+	s.nanos = cmap.New()
 	s.groups = make(map[int]Group)
 	s.cluster = make(map[string]ClusterNetwork)
 	s.driversSeen = cmap.New()

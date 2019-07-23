@@ -36,6 +36,23 @@ func (s *Service) sendHvacGroupSetpoint(mac string, temperatureOffset *int) {
 	s.sendHvacUpdate(conf)
 }
 
+func (s *Service) sendHvacSpaceValues(mac string, temperature int, co2 int, cov int, hygrometry int, opened bool) {
+	_, ok := s.hvacs.Get(mac)
+	if !ok {
+		rlog.Warn("Hvac " + mac + " not plugged to this switch")
+		return
+	}
+	conf := dhvac.HvacConf{
+		Mac:          mac,
+		WindowStatus: &opened,
+		Temperature:  &temperature,
+		CO2:          &co2,
+		COV:          &cov,
+		Hygrometry:   &hygrometry,
+	}
+	s.sendHvacUpdate(conf)
+}
+
 func (s *Service) removeHvac(mac string) {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac

@@ -44,14 +44,20 @@ type Group struct {
 	SensorsIssue       cmap.ConcurrentMap
 	Blinds             cmap.ConcurrentMap
 	BlindsIssue        cmap.ConcurrentMap
+	Nanosenses         cmap.ConcurrentMap
+	NanosensesIssue    cmap.ConcurrentMap
 	FirstDay           cmap.ConcurrentMap
 	SetpointBlinds     *int
 	SetpointSlatBlinds *int
 	ShiftTemp          *int //in 1/10°C
 	LastPresenceStatus bool
 	Counter            int
+	CeilingTemperature int
+	CeilingHumidity    int
 	Temperature        int
-	Humidity           int
+	Hygrometry         int
+	CO2                int
+	COV                int
 }
 
 func (s *Service) onGroupSensorEvent(client network.Client, msg network.Message) {
@@ -83,8 +89,37 @@ func (s *Service) onGroupSensorEvent(client network.Client, msg network.Message)
 	}
 }
 
+func (s *Service) onGroupNanoEvent(client network.Client, msg network.Message) {
+	rlog.Debug(msg.Topic() + " : " + string(msg.Payload()))
+	sGrID := strings.Split(msg.Topic(), "/")[3]
+	grID, err := strconv.Atoi(sGrID)
+	if err != nil {
+		return
+	}
+
+	group, ok := s.groups[grID]
+	if !ok {
+		rlog.Debug("Skip group")
+		return
+	}
+
+	var nano NanoEvent
+	err = json.Unmarshal(msg.Payload(), &nano)
+	if err != nil {
+		rlog.Error("Error during parsing", err.Error())
+		return
+	}
+
+	group.Nanosenses.Set(nano.Label, nano)
+	_, ok = group.NanosensesIssue.Get(nano.Label)
+	if ok {
+		//sensor no longer problematic
+		group.NanosensesIssue.Remove(nano.Label)
+	}
+}
+
 func (s *Service) onGroupBlindEvent(client network.Client, msg network.Message) {
-	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
+	rlog.Debug(msg.Topic() + " : " + string(msg.Payload()))
 	sGrID := strings.Split(msg.Topic(), "/")[3]
 	grID, err := strconv.Atoi(sGrID)
 	if err != nil {
@@ -160,6 +195,30 @@ func (s *Service) onGroupBlindErrorEvent(client network.Client, msg network.Mess
 	group.BlindsIssue.Set(blind.Mac, true)
 }
 
+func (s *Service) onGroupNanoErrorEvent(client network.Client, msg network.Message) {
+	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
+	sGrID := strings.Split(msg.Topic(), "/")[3]
+	grID, err := strconv.Atoi(sGrID)
+	if err != nil {
+		return
+	}
+
+	group, ok := s.groups[grID]
+	if !ok {
+		rlog.Debug("Skip group")
+		return
+	}
+
+	var nano NanoErrorEvent
+	err = json.Unmarshal(msg.Payload(), &nano)
+	if err != nil {
+		rlog.Error("Error during parsing", err.Error())
+		return
+	}
+
+	group.NanosensesIssue.Set(nano.Label, true)
+}
+
 func (s *Service) dumpGroupStatus(group Group) error {
 	name := ""
 	if group.Runtime.FriendlyName != nil {
@@ -215,8 +274,12 @@ func (s *Service) dumpGroupStatus(group Group) error {
 		SlopeStopAuto:        slopeStopAuto,
 		SlopeStopManual:      slopeStopManual,
 		Brightness:           group.Brightness,
+		CeilingTemperature:   group.CeilingTemperature,
+		CeilingHumidity:      group.CeilingHumidity,
 		Temperature:          group.Temperature,
-		Humidity:             group.Humidity,
+		CO2:                  group.CO2,
+		COV:                  group.COV,
+		Hygrometry:           group.Hygrometry,
 		Leds:                 group.Runtime.Leds,
 		Blinds:               group.Runtime.Blinds,
 		Sensors:              group.Runtime.Sensors,
@@ -291,7 +354,7 @@ func (s *Service) groupRun(group *Group) error {
 				//force to compute presence to be sure that the status is consistent even if the group was is manual mode
 				s.computePresence(group)
 				s.computeOpen(group)
-				s.computeTemperatureAndHumidity(group)
+				s.computeSensorTemperatureAndHumidity(group)
 				s.computeBrightness(group)
 
 				//force re-check mode due to the switch back manual to auto mode
@@ -511,7 +574,7 @@ func (s *Service) computeBrightness(group *Group) {
 	}
 }
 
-func (s *Service) computeTemperatureAndHumidity(group *Group) {
+func (s *Service) computeSensorTemperatureAndHumidity(group *Group) {
 	//compute sensor values
 	refMac := ""
 	hum := 0
@@ -538,19 +601,20 @@ func (s *Service) computeTemperatureAndHumidity(group *Group) {
 		return
 	}
 
-	group.Temperature = temp / nbValidSensors
-	group.Humidity = hum / nbValidSensors
+	group.CeilingTemperature = temp / nbValidSensors
+	group.CeilingHumidity = hum / nbValidSensors
 
 	sensorRule := gm.SensorAverage
 	if group.Runtime.SensorRule != nil {
 		sensorRule = *group.Runtime.SensorRule
 	}
+	switch sensorRule {
+	case gm.SensorMin:
+		group.CeilingTemperature = temp
+		group.CeilingHumidity = hum
+	}
 
 	for mac, d := range group.Sensors.Items() {
-		if mac == refMac {
-			continue
-		}
-
 		sensor, _ := ToSensorEvent(d)
 
 		_, ok := group.SensorsIssue.Get(sensor.Mac)
@@ -561,15 +625,120 @@ func (s *Service) computeTemperatureAndHumidity(group *Group) {
 
 		switch sensorRule {
 		case gm.SensorAverage:
-			group.Temperature += sensor.Temperature / nbValidSensors
-			group.Humidity += sensor.Humidity / nbValidSensors
+			if mac == refMac {
+				continue
+			}
+			group.CeilingTemperature += sensor.Temperature / nbValidSensors
+			group.CeilingHumidity += sensor.Humidity / nbValidSensors
 		case gm.SensorMax:
-			if group.Humidity < sensor.Humidity {
-				group.Humidity = sensor.Humidity
+			if group.CeilingHumidity < sensor.Humidity {
+				group.CeilingHumidity = sensor.Humidity
+			}
+			if group.CeilingTemperature < sensor.Temperature {
+				group.CeilingTemperature = sensor.Temperature
 			}
 		case gm.SensorMin:
-			if group.Humidity > sensor.Humidity {
-				group.Humidity = sensor.Humidity
+			if group.CeilingHumidity > sensor.Humidity {
+				group.CeilingHumidity = sensor.Humidity
+			}
+			if group.CeilingTemperature > sensor.Temperature {
+				group.CeilingTemperature = sensor.Temperature
+			}
+		}
+	}
+}
+
+func (s *Service) computeNanosenseInfo(group *Group) {
+	//compute nanosense values
+	refMac := ""
+	hum := 0
+	temp := 0
+	co2 := 0
+	cov := 0
+	for mac, driver := range group.Nanosenses.Items() {
+		nano, _ := ToNanoEvent(driver)
+		_, ok := group.NanosensesIssue.Get(mac)
+		if ok {
+			// do not take it to account a sensor with an issue
+			continue
+		}
+		refMac = mac
+		hum = nano.Hygrometry
+		co2 = nano.CO2
+		cov = nano.COV
+		temp = nano.Temperature
+		break
+	}
+	if refMac == "" {
+		//No sensors in this group
+		return
+	}
+	nbValidSensors := group.Nanosenses.Count() - group.NanosensesIssue.Count()
+	if nbValidSensors <= 0 {
+		//no valid sensor found
+		return
+	}
+
+	group.Temperature = temp / nbValidSensors
+	group.Hygrometry = hum / nbValidSensors
+	group.CO2 = co2 / nbValidSensors
+	group.COV = cov / nbValidSensors
+
+	sensorRule := gm.SensorAverage
+	if group.Runtime.SensorRule != nil {
+		sensorRule = *group.Runtime.SensorRule
+	}
+	switch sensorRule {
+	case gm.SensorMin:
+		group.Temperature = temp
+		group.Hygrometry = hum
+		group.CO2 = co2
+		group.COV = cov
+	}
+
+	for mac, d := range group.Nanosenses.Items() {
+		nano, _ := ToNanoEvent(d)
+
+		_, ok := group.SensorsIssue.Get(nano.Label)
+		if ok {
+			// do not take it to account a nano with an issue
+			continue
+		}
+
+		switch sensorRule {
+		case gm.SensorAverage:
+			if mac == refMac {
+				continue
+			}
+			group.Temperature += nano.Temperature / nbValidSensors
+			group.Hygrometry += nano.Hygrometry / nbValidSensors
+			group.COV += nano.COV / nbValidSensors
+			group.CO2 += nano.CO2 / nbValidSensors
+		case gm.SensorMax:
+			if group.Hygrometry < nano.Hygrometry {
+				group.Hygrometry = nano.Hygrometry
+			}
+			if group.Temperature < nano.Temperature {
+				group.Temperature = nano.Temperature
+			}
+			if group.CO2 < nano.CO2 {
+				group.CO2 = nano.CO2
+			}
+			if group.COV < nano.COV {
+				group.COV = nano.COV
+			}
+		case gm.SensorMin:
+			if group.Hygrometry > nano.Hygrometry {
+				group.Hygrometry = nano.Hygrometry
+			}
+			if group.Temperature > nano.Temperature {
+				group.Temperature = nano.Temperature
+			}
+			if group.CO2 > nano.CO2 {
+				group.CO2 = nano.CO2
+			}
+			if group.COV > nano.COV {
+				group.COV = nano.COV
 			}
 		}
 	}
@@ -634,20 +803,29 @@ func (s *Service) setpointHvac(group *Group, shift *int) {
 	}
 }
 
+func (s *Service) sendHvacValues(group *Group) {
+	// send hygro/Co2/COV/temp from nanosenses
+	for _, driver := range group.Runtime.Hvacs {
+		s.sendHvacSpaceValues(driver, group.Temperature, group.CO2, group.COV, group.Hygrometry, group.Opened)
+	}
+}
+
 func (s *Service) createGroup(runtime gm.GroupConfig) {
 	if runtime.Auto == nil {
 		auto := true
 		runtime.Auto = &auto
 	}
 	group := Group{
-		Event:        make(chan map[string]*gm.GroupConfig),
-		Runtime:      runtime,
-		Scale:        10,
-		Sensors:      cmap.New(),
-		SensorsIssue: cmap.New(),
-		Blinds:       cmap.New(),
-		BlindsIssue:  cmap.New(),
-		FirstDay:     cmap.New(),
+		Event:           make(chan map[string]*gm.GroupConfig),
+		Runtime:         runtime,
+		Scale:           10,
+		Sensors:         cmap.New(),
+		SensorsIssue:    cmap.New(),
+		Blinds:          cmap.New(),
+		BlindsIssue:     cmap.New(),
+		Nanosenses:      cmap.New(),
+		NanosensesIssue: cmap.New(),
+		FirstDay:        cmap.New(),
 	}
 	for _, sensor := range runtime.Sensors {
 		group.Sensors.Set(sensor, SensorEvent{})
@@ -657,12 +835,20 @@ func (s *Service) createGroup(runtime gm.GroupConfig) {
 		group.Blinds.Set(blind, BlindEvent{})
 	}
 
+	for _, nano := range runtime.Nanosenses {
+		group.Nanosenses.Set(nano, NanoEvent{})
+	}
+
 	for _, led := range runtime.FirstDay {
 		group.FirstDay.Set(led, true)
 	}
 	for _, sensor := range runtime.Sensors {
 		//to be sure of the state after a creation or a restart
 		group.SensorsIssue.Set(sensor, true)
+	}
+	for _, label := range runtime.Nanosenses {
+		//to be sure of the state after a creation or a restart
+		group.NanosensesIssue.Set(label, true)
 	}
 	for _, blind := range runtime.Blinds {
 		//to be sure of the state after a creation or a restart
@@ -797,6 +983,29 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 				_, ok := gr.BlindsIssue.Get(mac)
 				if ok {
 					gr.BlindsIssue.Remove(mac)
+				}
+			}
+		}
+	}
+	if new.Nanosenses != nil {
+		gr.Runtime.Nanosenses = new.Nanosenses
+		seen := make(map[string]bool)
+		for _, label := range new.Nanosenses {
+			_, ok := gr.Nanosenses.Get(label)
+			if !ok {
+				gr.Nanosenses.Set(label, NanoEvent{})
+			}
+			seen[label] = true
+			// do not take in to consideration until we received valid information from the nanosense
+			gr.NanosensesIssue.Set(label, true)
+		}
+		for label := range gr.Nanosenses.Items() {
+			_, ok := seen[label]
+			if !ok {
+				gr.Nanosenses.Remove(label)
+				_, ok := gr.Nanosenses.Get(label)
+				if ok {
+					gr.NanosensesIssue.Remove(label)
 				}
 			}
 		}
