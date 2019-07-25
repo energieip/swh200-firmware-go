@@ -41,7 +41,7 @@ func (s *Service) remoteClusterConnection(ip string, client ClusterNetwork) erro
 		rlog.Info("Try to connect to " + ip)
 		err := client.Iface.Initialize(confServer)
 		if err == nil {
-			rlog.Info(s.clientID + "cluster" + " connected to server broker " + ip)
+			rlog.Info("Connected to cluster server broker " + ip)
 			return err
 		}
 		timer := time.NewTicker(time.Second)

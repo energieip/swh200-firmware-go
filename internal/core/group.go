@@ -110,11 +110,11 @@ func (s *Service) onGroupNanoEvent(client network.Client, msg network.Message) {
 		return
 	}
 
-	group.Nanosenses.Set(nano.Label, nano)
-	_, ok = group.NanosensesIssue.Get(nano.Label)
+	group.Nanosenses.Set(nano.Mac, nano)
+	_, ok = group.NanosensesIssue.Get(nano.Mac)
 	if ok {
 		//sensor no longer problematic
-		group.NanosensesIssue.Remove(nano.Label)
+		group.NanosensesIssue.Remove(nano.Mac)
 	}
 }
 
@@ -216,7 +216,7 @@ func (s *Service) onGroupNanoErrorEvent(client network.Client, msg network.Messa
 		return
 	}
 
-	group.NanosensesIssue.Set(nano.Label, true)
+	group.NanosensesIssue.Set(nano.Mac, true)
 }
 
 func (s *Service) dumpGroupStatus(group Group) error {
@@ -699,7 +699,7 @@ func (s *Service) computeNanosenseInfo(group *Group) {
 	for mac, d := range group.Nanosenses.Items() {
 		nano, _ := ToNanoEvent(d)
 
-		_, ok := group.SensorsIssue.Get(nano.Label)
+		_, ok := group.SensorsIssue.Get(nano.Mac)
 		if ok {
 			// do not take it to account a nano with an issue
 			continue

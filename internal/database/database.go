@@ -6,8 +6,10 @@ import (
 	gm "github.com/energieip/common-components-go/pkg/dgroup"
 	"github.com/energieip/common-components-go/pkg/dhvac"
 	dl "github.com/energieip/common-components-go/pkg/dled"
+	"github.com/energieip/common-components-go/pkg/dnanosense"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
 	"github.com/energieip/common-components-go/pkg/duser"
+	"github.com/energieip/common-components-go/pkg/dwago"
 	"github.com/energieip/common-components-go/pkg/pconst"
 	pkg "github.com/energieip/common-components-go/pkg/service"
 	"github.com/romana/rlog"
@@ -54,6 +56,7 @@ func prepareDB(db Database, withDrop bool) {
 			tableCfg[pconst.TbSensors] = ds.SensorSetup{}
 			tableCfg[pconst.TbGroups] = gm.GroupConfig{}
 			tableCfg[pconst.TbBlinds] = dblind.BlindSetup{}
+			tableCfg[pconst.TbWagos] = dwago.WagoDef{}
 			tableCfg[TableCluster] = pkg.Broker{}
 			tableCfg[pconst.TbHvacs] = dhvac.HvacSetup{}
 			tableCfg[AccessTable] = duser.UserAccess{}
@@ -63,6 +66,8 @@ func prepareDB(db Database, withDrop bool) {
 			tableCfg[pconst.TbGroups] = gm.GroupStatus{}
 			tableCfg[pconst.TbBlinds] = dblind.Blind{}
 			tableCfg[pconst.TbHvacs] = dhvac.Hvac{}
+			tableCfg[pconst.TbWagos] = dwago.Wago{}
+			tableCfg[pconst.TbNanosenses] = dnanosense.Nanosense{}
 		}
 		for tableName, objs := range tableCfg {
 			if withDrop {

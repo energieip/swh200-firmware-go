@@ -56,7 +56,7 @@ func (s *Service) remoteServerConnection() error {
 		rlog.Info("Try to connect to " + s.conf.NetworkBroker.IP)
 		err := s.server.Iface.Initialize(confServer)
 		if err == nil {
-			rlog.Info(s.clientID + " connected to server broker " + s.conf.NetworkBroker.IP)
+			rlog.Info("Connected to server broker " + s.conf.NetworkBroker.IP)
 			return err
 		}
 		timer := time.NewTicker(time.Second)

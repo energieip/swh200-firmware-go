@@ -12,7 +12,7 @@ import (
 )
 
 type NanoEvent struct {
-	Label       string `json:"label"`
+	Mac         string `json:"mac"`
 	Hygrometry  int    `json:"hygrometry"`
 	Temperature int    `json:"temperature"`
 	CO2         int    `json:"co2"`
@@ -20,7 +20,7 @@ type NanoEvent struct {
 }
 
 type NanoErrorEvent struct {
-	Label string `json:"label"`
+	Mac string `json:"mac"`
 }
 
 //ToJSON dump struct in json
@@ -85,7 +85,7 @@ func (s *Service) updateNanoStatus(driver dn.Nanosense) error {
 func (s *Service) sendInvalidNanoStatus(driver dn.Nanosense) {
 	url := "/read/group/" + strconv.Itoa(driver.Group) + "/error/nano"
 	evt := NanoErrorEvent{
-		Label: driver.Label,
+		Mac: driver.Mac,
 	}
 	dump, _ := evt.ToJSON()
 
@@ -110,7 +110,7 @@ func (s *Service) onNanoStatus(client network.Client, msg network.Message) {
 	if driver.Error == 0 {
 		url := "/read/group/" + strconv.Itoa(driver.Group) + "/events/nano"
 		evt := NanoEvent{
-			Label:       driver.Label,
+			Mac:         driver.Mac,
 			Hygrometry:  driver.Hygrometry,
 			Temperature: driver.Temperature,
 			CO2:         driver.CO2,
