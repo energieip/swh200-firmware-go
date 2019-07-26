@@ -36,7 +36,7 @@ func (s *Service) sendHvacGroupSetpoint(mac string, temperatureOffset *int) {
 	s.sendHvacUpdate(conf)
 }
 
-func (s *Service) sendHvacSpaceValues(mac string, temperature int, co2 int, cov int, hygrometry int, opened bool) {
+func (s *Service) sendHvacSpaceValues(mac string, temperature int, co2 int, cov int, hygrometry int, opened bool, presence bool) {
 	_, ok := s.hvacs.Get(mac)
 	if !ok {
 		rlog.Warn("Hvac " + mac + " not plugged to this switch")
@@ -49,6 +49,7 @@ func (s *Service) sendHvacSpaceValues(mac string, temperature int, co2 int, cov 
 		CO2:          &co2,
 		COV:          &cov,
 		Hygrometry:   &hygrometry,
+		Presence:     &presence,
 	}
 	s.sendHvacUpdate(conf)
 }

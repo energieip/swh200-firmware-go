@@ -90,7 +90,7 @@ func (s *Service) onGroupSensorEvent(client network.Client, msg network.Message)
 }
 
 func (s *Service) onGroupNanoEvent(client network.Client, msg network.Message) {
-	rlog.Debug(msg.Topic() + " : " + string(msg.Payload()))
+	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
 	sGrID := strings.Split(msg.Topic(), "/")[3]
 	grID, err := strconv.Atoi(sGrID)
 	if err != nil {
@@ -113,7 +113,7 @@ func (s *Service) onGroupNanoEvent(client network.Client, msg network.Message) {
 	group.Nanosenses.Set(nano.Mac, nano)
 	_, ok = group.NanosensesIssue.Get(nano.Mac)
 	if ok {
-		//sensor no longer problematic
+		//nanosense no longer problematic
 		group.NanosensesIssue.Remove(nano.Mac)
 	}
 }
@@ -284,6 +284,7 @@ func (s *Service) dumpGroupStatus(group Group) error {
 		Blinds:               group.Runtime.Blinds,
 		Sensors:              group.Runtime.Sensors,
 		Hvacs:                group.Runtime.Hvacs,
+		Nanosenses:           group.Runtime.Nanosenses,
 		RuleBrightness:       group.Runtime.RuleBrightness,
 		RulePresence:         group.Runtime.RulePresence,
 		Watchdog:             watchdog,
@@ -356,6 +357,14 @@ func (s *Service) groupRun(group *Group) error {
 				s.computeOpen(group)
 				s.computeSensorTemperatureAndHumidity(group)
 				s.computeBrightness(group)
+				s.computeNanosenseInfo(group)
+				interval := 10
+				if group.Runtime.CorrectionInterval != nil {
+					interval = *group.Runtime.CorrectionInterval
+				}
+				if group.Counter%interval == 0 {
+					s.sendHvacValues(group)
+				}
 
 				//force re-check mode due to the switch back manual to auto mode
 				if !s.isManualMode(group) {
@@ -374,13 +383,13 @@ func (s *Service) groupRun(group *Group) error {
 						s.setpointLed(group)
 					} else {
 						if group.Presence {
-							if group.Runtime.CorrectionInterval == nil || group.Counter >= *group.Runtime.CorrectionInterval {
+							if group.Counter >= interval {
 								s.updateBrightness(group)
 								s.setpointLed(group)
 								group.Counter = 0
 							}
 						} else {
-							if group.Runtime.CorrectionInterval == nil || group.Counter >= *group.Runtime.CorrectionInterval {
+							if group.Counter >= interval {
 								group.Setpoint = 0
 								group.FirstDaySetpoint = 0
 								group.Counter = 0
@@ -659,7 +668,7 @@ func (s *Service) computeNanosenseInfo(group *Group) {
 		nano, _ := ToNanoEvent(driver)
 		_, ok := group.NanosensesIssue.Get(mac)
 		if ok {
-			// do not take it to account a sensor with an issue
+			// do not take it to account a nanosense with an issue
 			continue
 		}
 		refMac = mac
@@ -806,7 +815,7 @@ func (s *Service) setpointHvac(group *Group, shift *int) {
 func (s *Service) sendHvacValues(group *Group) {
 	// send hygro/Co2/COV/temp from nanosenses
 	for _, driver := range group.Runtime.Hvacs {
-		s.sendHvacSpaceValues(driver, group.Temperature, group.CO2, group.COV, group.Hygrometry, group.Opened)
+		s.sendHvacSpaceValues(driver, group.Temperature, group.CO2, group.COV, group.Hygrometry, group.Opened, group.Presence)
 	}
 }
 
@@ -1003,7 +1012,7 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 			_, ok := seen[label]
 			if !ok {
 				gr.Nanosenses.Remove(label)
-				_, ok := gr.Nanosenses.Get(label)
+				_, ok := gr.NanosensesIssue.Get(label)
 				if ok {
 					gr.NanosensesIssue.Remove(label)
 				}
