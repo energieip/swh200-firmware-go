@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	dl "github.com/energieip/common-components-go/pkg/dled"
@@ -162,6 +163,7 @@ func (s *Service) onLedHello(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
+	led.Mac = strings.ToUpper(led.Mac)
 	s.driversSeen.Set(led.Mac, time.Now().UTC())
 	led.IsConfigured = false
 	led.SwitchMac = s.mac
@@ -190,6 +192,7 @@ func (s *Service) onLedStatus(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
+	led.Mac = strings.ToUpper(led.Mac)
 	s.driversSeen.Set(led.Mac, time.Now().UTC())
 	led.SwitchMac = s.mac
 	val, ok := s.ledsToAuto[led.Mac]

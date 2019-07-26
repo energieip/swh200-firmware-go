@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"strings"
 	"time"
 
 	sd "github.com/energieip/common-components-go/pkg/dswitch"
@@ -79,7 +80,7 @@ func (s *Service) onSetup(client genericNetwork.Client, msg genericNetwork.Messa
 		rlog.Error("Cannot parse config ", err.Error())
 		return
 	}
-
+	switchConf.Mac = strings.ToUpper(switchConf.Mac)
 	event := make(map[string]sd.SwitchConfig)
 	event[EventServerSetup] = switchConf
 	s.server.Events <- event
@@ -94,7 +95,7 @@ func (s *Service) onRemoveSetting(client genericNetwork.Client, msg genericNetwo
 		rlog.Error("Cannot parse config ", err.Error())
 		return
 	}
-
+	switchConf.Mac = strings.ToUpper(switchConf.Mac)
 	event := make(map[string]sd.SwitchConfig)
 	event[EventServerRemove] = switchConf
 	s.server.Events <- event
@@ -109,7 +110,7 @@ func (s *Service) onUpdateSetting(client genericNetwork.Client, msg genericNetwo
 		rlog.Error("Cannot parse config ", err.Error())
 		return
 	}
-
+	switchConf.Mac = strings.ToUpper(switchConf.Mac)
 	event := make(map[string]sd.SwitchConfig)
 	event[EventServerReload] = switchConf
 	s.server.Events <- event

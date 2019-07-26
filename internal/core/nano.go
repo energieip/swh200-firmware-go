@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	dn "github.com/energieip/common-components-go/pkg/dnanosense"
@@ -102,6 +103,7 @@ func (s *Service) onNanoStatus(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
+	driver.Mac = strings.ToUpper(driver.Mac)
 	s.driversSeen.Set(driver.Label, time.Now().UTC())
 	err = s.updateNanoStatus(driver)
 	if err != nil {

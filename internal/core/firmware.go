@@ -91,7 +91,7 @@ func (s *Service) Initialize(confFile string) error {
 
 	mac, ip := tools.GetNetworkInfo()
 	s.ip = ip
-	s.mac = mac
+	s.mac = strings.ToUpper(mac)
 	s.services = make(map[string]pkg.Service)
 
 	os.Setenv("RLOG_LOG_LEVEL", conf.LogLevel)
@@ -111,7 +111,6 @@ func (s *Service) Initialize(confFile string) error {
 	s.db = db
 
 	groups := database.GetGroupsConfig(s.db)
-	rlog.Info("=== get groups ", groups)
 	for grID, group := range groups {
 		rlog.Info("Restore group ", grID)
 		s.createGroup(group)

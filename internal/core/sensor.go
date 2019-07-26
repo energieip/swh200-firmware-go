@@ -3,6 +3,7 @@ package core
 import (
 	"encoding/json"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/energieip/common-components-go/pkg/pconst"
@@ -150,6 +151,7 @@ func (s *Service) onSensorHello(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
+	sensor.Mac = strings.ToUpper(sensor.Mac)
 	s.driversSeen.Set(sensor.Mac, time.Now().UTC())
 	sensor.IsConfigured = false
 	sensor.SwitchMac = s.mac
@@ -175,6 +177,7 @@ func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 		rlog.Error("Error during parsing", err.Error())
 		return
 	}
+	sensor.Mac = strings.ToUpper(sensor.Mac)
 	s.driversSeen.Set(sensor.Mac, time.Now().UTC())
 	sensor.SwitchMac = s.mac
 	// apply brightness correction Factor
