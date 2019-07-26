@@ -1,7 +1,12 @@
 package core
 
 import (
+	"encoding/json"
+	"strings"
+	"time"
+
 	"github.com/energieip/common-components-go/pkg/dwago"
+	"github.com/energieip/common-components-go/pkg/network"
 	"github.com/energieip/common-components-go/pkg/pconst"
 	"github.com/energieip/swh200-firmware-go/internal/database"
 	"github.com/romana/rlog"
@@ -57,4 +62,65 @@ func (s *Service) sendWagoUpdate(driver dwago.WagoDef) {
 	url := "/write/wago/" + driver.Mac + "/" + pconst.UrlSetting
 	dump, _ := driver.ToJSON()
 	s.localSendCommand(url, dump)
+}
+
+func (s *Service) updateWagoStatus(driver dwago.Wago) error {
+	var err error
+	v, ok := s.wagos.Get(driver.Mac)
+	if ok && v != nil {
+		val := v.(dwago.Wago)
+		if val == driver {
+			//case no change
+			return nil
+		}
+	}
+
+	// Check if the serial already exist in database (case restart process)
+	err = database.SaveWagoStatus(s.db, driver)
+	if err == nil {
+		s.wagos.Set(driver.Mac, driver)
+	}
+	return err
+}
+
+func (s *Service) onWagoHello(client network.Client, msg network.Message) {
+	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
+	var driver dwago.Wago
+	err := json.Unmarshal(msg.Payload(), &driver)
+	if err != nil {
+		rlog.Error("Error during parsing", err.Error())
+		return
+	}
+	driver.Mac = strings.ToUpper(driver.Mac)
+	s.driversSeen.Set(driver.Mac, time.Now().UTC())
+	if driver.DumpFrequency == 0 {
+		driver.DumpFrequency = 1000 //ms default value
+	}
+
+	err = s.updateWagoStatus(driver)
+	if err != nil {
+		rlog.Error("Error during database update ", err.Error())
+		return
+	}
+	cfg, _ := database.GetWagoConfig(s.db, driver.Mac)
+	if cfg != nil {
+		s.sendWagoSetup(*cfg)
+	}
+}
+
+func (s *Service) onWagoStatus(client network.Client, msg network.Message) {
+	topic := msg.Topic()
+	rlog.Info(topic + " : " + string(msg.Payload()))
+	var driver dwago.Wago
+	err := json.Unmarshal(msg.Payload(), &driver)
+	if err != nil {
+		rlog.Error("Error during parsing", err.Error())
+		return
+	}
+	driver.Mac = strings.ToUpper(driver.Mac)
+	s.driversSeen.Set(driver.Mac, time.Now().UTC())
+	err = s.updateWagoStatus(driver)
+	if err != nil {
+		rlog.Error("Error during database update ", err.Error())
+	}
 }

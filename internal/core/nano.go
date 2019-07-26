@@ -66,7 +66,7 @@ func ToNanoEvent(val interface{}) (*NanoEvent, error) {
 
 func (s *Service) updateNanoStatus(driver dn.Nanosense) error {
 	var err error
-	v, ok := s.nanos.Get(driver.Label)
+	v, ok := s.nanos.Get(driver.Mac)
 	if ok && v != nil {
 		val := v.(dn.Nanosense)
 		if val == driver {
@@ -78,7 +78,7 @@ func (s *Service) updateNanoStatus(driver dn.Nanosense) error {
 	// Check if the serial already exist in database (case restart process)
 	err = database.SaveNanoStatus(s.db, driver)
 	if err == nil {
-		s.nanos.Set(driver.Label, driver)
+		s.nanos.Set(driver.Mac, driver)
 	}
 	return err
 }
@@ -104,7 +104,7 @@ func (s *Service) onNanoStatus(client network.Client, msg network.Message) {
 		return
 	}
 	driver.Mac = strings.ToUpper(driver.Mac)
-	s.driversSeen.Set(driver.Label, time.Now().UTC())
+	s.driversSeen.Set(driver.Mac, time.Now().UTC())
 	err = s.updateNanoStatus(driver)
 	if err != nil {
 		rlog.Error("Error during database update ", err.Error())

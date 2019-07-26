@@ -35,6 +35,8 @@ func (s *Service) localConnection() error {
 	cbkLocal["/read/hvac/+/"+pconst.UrlStatus] = s.onHvacStatus
 	cbkLocal["/read/blind/+/"+pconst.UrlHello] = s.onBlindHello
 	cbkLocal["/read/blind/+/"+pconst.UrlStatus] = s.onBlindStatus
+	cbkLocal["/read/wago/+/"+pconst.UrlHello] = s.onWagoHello
+	cbkLocal["/read/wago/+/"+pconst.UrlStatus] = s.onWagoStatus
 	cbkLocal["/read/nano/+/"+pconst.UrlHello] = s.onNanoStatus
 	cbkLocal["/read/nano/+/"+pconst.UrlStatus] = s.onNanoStatus
 	cbkLocal["/read/group/+/events/sensor"] = s.onGroupSensorEvent

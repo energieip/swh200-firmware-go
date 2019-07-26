@@ -230,13 +230,15 @@ func (s *Service) sendDump() {
 	sensors := database.GetStatusSensors(s.db)
 	blinds := database.GetStatusBlinds(s.db)
 	hvacs := database.GetStatusHvacs(s.db)
+	wagos := database.GetStatusWagos(s.db)
 	nanos := database.GetStatusNanos(s.db)
 
 	dumpSensors := make(map[string]ds.Sensor)
 	dumpLeds := make(map[string]dl.Led)
 	dumpBlinds := make(map[string]dblind.Blind)
 	dumpHvacs := make(map[string]dhvac.Hvac)
-	// dumpNanos := make(map[string]dnanosense.Nanosense)
+	dumpWagos := make(map[string]dwago.Wago)
+	dumpNanos := make(map[string]dnanosense.Nanosense)
 	for _, driver := range leds {
 		val, ok := s.driversSeen.Get(driver.Mac)
 		if ok && val != nil {
@@ -337,7 +339,49 @@ func (s *Service) sendDump() {
 	}
 	status.Hvacs = dumpHvacs
 
-	status.Nanos = nanos
+	for _, driver := range wagos {
+		val, ok := s.driversSeen.Get(driver.Mac)
+		if ok && val != nil {
+			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
+			if timeNow.Sub(val.(time.Time)) <= maxDuration {
+				dumpWagos[driver.Mac] = driver
+				continue
+			} else {
+				rlog.Warn("WAGO " + driver.Mac + " no longer seen; drop it")
+				s.wagos.Remove(driver.Mac)
+				s.driversSeen.Remove(driver.Mac)
+				database.RemoveWagoStatus(s.db, driver.Mac)
+			}
+		} else {
+			_, ok := s.wagos.Get(driver.Mac)
+			if ok {
+				s.wagos.Remove(driver.Mac)
+			}
+		}
+	}
+	status.Wagos = dumpWagos
+
+	for _, driver := range nanos {
+		val, ok := s.driversSeen.Get(driver.Mac)
+		if ok && val != nil {
+			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
+			if timeNow.Sub(val.(time.Time)) <= maxDuration {
+				dumpNanos[driver.Mac] = driver
+				continue
+			} else {
+				rlog.Warn("Nanos " + driver.Mac + " no longer seen; drop it")
+				s.nanos.Remove(driver.Mac)
+				s.driversSeen.Remove(driver.Mac)
+				database.RemoveNanoStatus(s.db, driver.Mac)
+			}
+		} else {
+			_, ok := s.nanos.Get(driver.Mac)
+			if ok {
+				s.nanos.Remove(driver.Mac)
+			}
+		}
+	}
+	status.Nanos = dumpNanos
 	status.Groups = database.GetStatusGroup(s.db)
 	status.BlindsPower = blindsPower
 	status.HvacsPower = hvacsPower

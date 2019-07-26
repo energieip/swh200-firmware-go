@@ -22,7 +22,7 @@ func GetStatusNanos(db Database) map[string]dn.Nanosense {
 		if err != nil || cell == nil {
 			continue
 		}
-		nanos[cell.Label] = *cell
+		nanos[cell.Mac] = *cell
 	}
 	return nanos
 }
