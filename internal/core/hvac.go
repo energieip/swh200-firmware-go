@@ -27,7 +27,7 @@ func (s *Service) sendHvacUpdate(driver dhvac.HvacConf) {
 func (s *Service) sendHvacGroupSetpoint(mac string, temperatureOffset *int) {
 	_, ok := s.hvacs.Get(mac)
 	if !ok {
-		rlog.Warn("Hvac " + mac + " not plugged to this switch")
+		rlog.Warn("HVAC " + mac + " not plugged to this switch")
 		return
 	}
 	conf := dhvac.HvacConf{
@@ -40,7 +40,7 @@ func (s *Service) sendHvacGroupSetpoint(mac string, temperatureOffset *int) {
 func (s *Service) sendHvacSpaceValues(mac string, temperature int, co2 int, cov int, hygrometry int, opened bool, presence bool) {
 	_, ok := s.hvacs.Get(mac)
 	if !ok {
-		rlog.Warn("Hvac " + mac + " not plugged to this switch")
+		rlog.Warn("HVAC " + mac + " not plugged to this switch")
 		return
 	}
 	conf := dhvac.HvacConf{

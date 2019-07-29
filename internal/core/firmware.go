@@ -438,58 +438,69 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 		wagoDev.Label = wago.Label
 		wagoDev.Mac = wago.Mac
 		wagoDev.IsConfigured = wago.IsConfigured
-		var nanos []dnanosense.NanosenseDef
+		wagoDev.ModbusOffset = wago.ModbusOffset
+		s.prepareWagoSetup(wagoDev)
+	}
+
+	for _, nano := range switchConfig.NanosSetup {
+		wagoMac := strings.Split(nano.Mac, ".")[0]
+		wago, _ := database.GetWagoConfig(s.db, wagoMac)
+		if wago == nil {
+			continue
+		}
 		modbusOffset := 0
 		if wago.ModbusOffset != nil {
 			modbusOffset = *wago.ModbusOffset
 		}
-		for _, nano := range switchConfig.NanosSetup {
-			if !strings.HasPrefix(nano.Mac, wago.Mac) {
-				continue
-			}
-			friend := nano.Label
-			if nano.FriendlyName != nil {
-				friend = *nano.FriendlyName
-			}
-			nanoDev := dnanosense.NanosenseDef{
-				Cluster:      nano.Cluster,
-				Group:        nano.Group,
-				FriendlyName: friend,
-				Label:        nano.Label,
-				Mac:          nano.Mac,
-			}
-			covAPI, ok := nano.API["CoV"]
-			if ok {
-				i, err := strconv.Atoi(covAPI)
-				if err == nil {
-					nanoDev.COV = nano.ModbusOffset + i + modbusOffset
-				}
-			}
-			co2API, ok := nano.API["CO2"]
-			if ok {
-				i, err := strconv.Atoi(co2API)
-				if err == nil {
-					nanoDev.CO2 = nano.ModbusOffset + i + modbusOffset
-				}
-			}
-			HygoAPI, ok := nano.API["Hygro"]
-			if ok {
-				i, err := strconv.Atoi(HygoAPI)
-				if err == nil {
-					nanoDev.Hygrometry = nano.ModbusOffset + i + modbusOffset
-				}
-			}
-			tempAPI, ok := nano.API["Temp"]
-			if ok {
-				i, err := strconv.Atoi(tempAPI)
-				if err == nil {
-					nanoDev.Temperature = nano.ModbusOffset + i + modbusOffset
-				}
-			}
-			nanos = append(nanos, nanoDev)
+
+		friend := nano.Label
+		if nano.FriendlyName != nil {
+			friend = *nano.FriendlyName
 		}
-		wagoDev.Nanosenses = nanos
-		s.prepareWagoSetup(wagoDev)
+		nanoDev := dnanosense.NanosenseDef{
+			Cluster:      nano.Cluster,
+			Group:        nano.Group,
+			FriendlyName: friend,
+			Label:        nano.Label,
+			Mac:          nano.Mac,
+		}
+		covAPI, ok := nano.API["CoV"]
+		if ok {
+			i, err := strconv.Atoi(covAPI)
+			if err == nil {
+				nanoDev.COV = nano.ModbusOffset + i + modbusOffset
+			}
+		}
+		co2API, ok := nano.API["CO2"]
+		if ok {
+			i, err := strconv.Atoi(co2API)
+			if err == nil {
+				nanoDev.CO2 = nano.ModbusOffset + i + modbusOffset
+			}
+		}
+		HygoAPI, ok := nano.API["Hygro"]
+		if ok {
+			i, err := strconv.Atoi(HygoAPI)
+			if err == nil {
+				nanoDev.Hygrometry = nano.ModbusOffset + i + modbusOffset
+			}
+		}
+		tempAPI, ok := nano.API["Temp"]
+		if ok {
+			i, err := strconv.Atoi(tempAPI)
+			if err == nil {
+				nanoDev.Temperature = nano.ModbusOffset + i + modbusOffset
+			}
+		}
+		var nanos []dnanosense.NanosenseDef
+		for _, n := range wago.Nanosenses {
+			if n.Mac != nano.Mac {
+				nanos = append(nanos, n)
+			}
+		}
+		nanos = append(nanos, nanoDev)
+		wago.Nanosenses = nanos
+		s.prepareWagoSetup(*wago)
 	}
 
 	for _, user := range switchConfig.Users {

@@ -66,14 +66,14 @@ func (s *Service) sendWagoUpdate(driver dwago.WagoDef) {
 
 func (s *Service) updateWagoStatus(driver dwago.Wago) error {
 	var err error
-	v, ok := s.wagos.Get(driver.Mac)
-	if ok && v != nil {
-		val := v.(dwago.Wago)
-		if val == driver {
-			//case no change
-			return nil
-		}
-	}
+	// v, ok := s.wagos.Get(driver.Mac)
+	// if ok && v != nil {
+	// 	val := v.(dwago.Wago)
+	// 	if val == driver {
+	// 		//case no change
+	// 		return nil
+	// 	}
+	// }
 
 	// Check if the serial already exist in database (case restart process)
 	err = database.SaveWagoStatus(s.db, driver)
