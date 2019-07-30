@@ -182,6 +182,10 @@ func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 	sensor.SwitchMac = s.mac
 	// apply brightness correction Factor
 	sensor.Brightness = sensor.BrightnessRaw / sensor.BrightnessCorrectionFactor
+	cfg := database.GetConfigSensor(s.db, sensor.Mac)
+	if cfg != nil {
+		sensor.Label = cfg.Label
+	}
 
 	err = s.updateSensorStatus(sensor)
 	if err != nil {

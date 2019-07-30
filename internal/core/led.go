@@ -207,6 +207,7 @@ func (s *Service) onLedStatus(client network.Client, msg network.Message) {
 		if cfg.FirstDay != nil {
 			led.FirstDay = *cfg.FirstDay
 		}
+		led.Label = cfg.Label
 	}
 
 	err = s.updateLedStatus(led)

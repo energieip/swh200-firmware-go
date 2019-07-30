@@ -215,6 +215,11 @@ func (s *Service) onBlindStatus(client network.Client, msg network.Message) {
 	driver.Mac = strings.ToUpper(driver.Mac)
 	s.driversSeen.Set(driver.Mac, time.Now().UTC())
 	driver.SwitchMac = s.mac
+	cfg := database.GetConfigBlind(s.db, driver.Mac)
+	if cfg != nil {
+		driver.Label = cfg.Label
+	}
+
 	err = s.updateBlindStatus(driver)
 	if err != nil {
 		rlog.Error("Error during database update ", err.Error())
