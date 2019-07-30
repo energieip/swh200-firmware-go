@@ -439,6 +439,15 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 		wagoDev.Mac = wago.Mac
 		wagoDev.IsConfigured = wago.IsConfigured
 		wagoDev.ModbusOffset = wago.ModbusOffset
+		var crons []dwago.CronJobDef
+		for k, v := range wago.API {
+			cron := dwago.CronJobDef{}
+			cron.Action = k
+			modID, _ := strconv.Atoi(v)
+			cron.ModbusID = modID
+			crons = append(crons, cron)
+		}
+		wagoDev.CronJobs = crons
 		s.prepareWagoSetup(wagoDev)
 	}
 
