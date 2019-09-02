@@ -1,14 +1,14 @@
 hash: d411425b4f9db07589085d22323989d1ba481bfb0dd3cddbcc5288ab094b4b65
-updated: 2019-08-02T14:21:18.499868648+02:00
+updated: 2019-09-02T16:28:22.563447171+02:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 2146c93394225c3732078705043ce9f26584d334
 - name: github.com/eclipse/paho.mqtt.golang
-  version: 93c8a06e1e6dfeb17dd18a44e3e2f4e1db778237
+  version: 2e9e43b5d02b38840f73bf795ddc8a266a10bf53
   subpackages:
   - packets
 - name: github.com/energieip/common-components-go
-  version: 4869454857145d8cc401dc44ee93504d856f12cb
+  version: cdd5c43f9b6d506293ce22c2523bf99249f3b44a
   subpackages:
   - pkg/database
   - pkg/dblind
@@ -25,40 +25,40 @@ imports:
   - pkg/service
   - pkg/tools
 - name: github.com/golang/protobuf
-  version: 6c65a5562fc06764971b7c5d05c76c75e84bdbf7
+  version: 822fe56949f5d56c9e2f02367c657e0e9b4d27d1
   subpackages:
   - proto
 - name: github.com/gorilla/mux
-  version: e67b3c02c7195c052acff13261f0c9fd1ba53011
+  version: 884b5ffcbd3a11b730f0b75f5c86ac408753c34d
 - name: github.com/gorilla/websocket
-  version: ae1634f6a98965ded3b8789c626cb4e0bd78c3de
+  version: c3e18be99d19e6b3e8f1559eea2c161a665c4b6b
 - name: github.com/hailocab/go-hostpool
   version: e80d13ce29ede4452c43dea11e79b9bc8a15b478
 - name: github.com/konsorten/go-windows-terminal-sequences
   version: f55edac94c9bbba5d6182a4be46d86a2c9b5b50e
 - name: github.com/opentracing/opentracing-go
-  version: 135aa78c6f95b4a199daf2f0470d231136cbbd0c
+  version: 94e0bdd2b1d9c6803a9729f999cdaed72f5a361d
   subpackages:
   - ext
   - log
 - name: github.com/orcaman/concurrent-map
-  version: 2693aad1ed7517c2bb5b3a42cb8fde88b941d89d
+  version: 8c72a8bb44f6cfcff2abae8ebcbaaaf883331363
 - name: github.com/romana/rlog
   version: f018bc92e7d71f27c04e04cbf008860416c21d01
 - name: github.com/sirupsen/logrus
-  version: 07a84ee7412e7a28663d92930a1d46f81b124ee1
+  version: de736cf91b921d56253b4010270681d33fdf7cb5
 - name: golang.org/x/crypto
-  version: 4def268fd1a49955bfb3dda92fe3db4f924f2285
+  version: 9756ffdc24725223350eb3266ffb92590d28f278
   subpackages:
   - pbkdf2
 - name: golang.org/x/net
-  version: ca1201d0de80cfde86cb01aea620983605dfe99b
+  version: ba9fcec4b297b415637633c5a6e8fa592e4a16c3
   subpackages:
   - context
   - internal/socks
   - proxy
 - name: golang.org/x/sys
-  version: cbf593c0f2f39034e9104bbf77e2ec7c48c98fc5
+  version: 9109b7679e13aa34a54834cfb4949cac4b96e576
   subpackages:
   - unix
 - name: gopkg.in/fatih/pool.v2
