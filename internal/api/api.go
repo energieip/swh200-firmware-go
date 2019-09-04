@@ -164,7 +164,7 @@ func (api *API) getV1HVACConsumptions(w http.ResponseWriter, req *http.Request) 
 
 func (api *API) swagger() {
 	router := mux.NewRouter()
-	sh := http.StripPrefix("/swaggerui/", http.FileServer(http.Dir("/media/userdata/www/swaggerui/")))
+	sh := http.StripPrefix("/swaggerui/", http.FileServer(http.Dir("/data/www/swaggerui/")))
 	router.PathPrefix("/swaggerui/").Handler(sh)
 
 	// API v1.0
