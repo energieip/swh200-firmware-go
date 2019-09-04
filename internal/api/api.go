@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"sync"
 
+	"github.com/energieip/common-components-go/pkg/dswitch"
 	pkg "github.com/energieip/common-components-go/pkg/service"
 	"github.com/energieip/swh200-firmware-go/internal/database"
 	"github.com/gorilla/mux"
@@ -84,13 +85,6 @@ func (api *API) getV1Functions(w http.ResponseWriter, req *http.Request) {
 	w.Write(inrec)
 }
 
-type APIV1SwitchConsumptions struct {
-	TotalPower    int `json:"totalPower"`
-	LightingPower int `json:"lightningPower"`
-	BlindPower    int `json:"blindPower"`
-	HvacPower     int `json:"hvacPower"`
-}
-
 func (api *API) getV1Consumptions(w http.ResponseWriter, req *http.Request) {
 	api.setDefaultHeader(w)
 	power := 0
@@ -113,7 +107,7 @@ func (api *API) getV1Consumptions(w http.ResponseWriter, req *http.Request) {
 		hvacs += driver.LinePower
 	}
 
-	conso := APIV1SwitchConsumptions{
+	conso := dswitch.SwitchConsumptions{
 		TotalPower:    power,
 		LightingPower: leds,
 		BlindPower:    blinds,
