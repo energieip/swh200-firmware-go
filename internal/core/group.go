@@ -895,8 +895,18 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 	if new == nil {
 		return
 	}
-	if new.Auto != gr.Runtime.Auto {
+	if new.Auto != nil && new.Auto != gr.Runtime.Auto {
 		gr.Runtime.Auto = new.Auto
+		if gr.Runtime.Auto != nil {
+			rlog.Info("Switch Group " + strconv.Itoa(gr.Runtime.Group) + " in Auto " + strconv.FormatBool(*gr.Runtime.Auto))
+			if *gr.Runtime.Auto == false {
+				go func() {
+					event := make(map[string]*gm.GroupConfig)
+					event[EventManual] = nil
+					gr.Event <- event
+				}()
+			}
+		}
 	}
 	if new.SlopeStartManual != nil {
 		gr.Runtime.SlopeStartManual = new.SlopeStartManual

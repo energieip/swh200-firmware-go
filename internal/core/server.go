@@ -73,7 +73,7 @@ func (s *Service) remoteServerConnection() error {
 
 func (s *Service) onSetup(client genericNetwork.Client, msg genericNetwork.Message) {
 	payload := msg.Payload()
-	rlog.Info(msg.Topic() + " : " + string(payload))
+	rlog.Debug(msg.Topic() + " : " + string(payload))
 	var switchConf sd.SwitchConfig
 	err := json.Unmarshal(payload, &switchConf)
 	if err != nil {
@@ -88,7 +88,7 @@ func (s *Service) onSetup(client genericNetwork.Client, msg genericNetwork.Messa
 
 func (s *Service) onRemoveSetting(client genericNetwork.Client, msg genericNetwork.Message) {
 	payload := msg.Payload()
-	rlog.Info(msg.Topic() + " : " + string(payload))
+	rlog.Debug(msg.Topic() + " : " + string(payload))
 	var switchConf sd.SwitchConfig
 	err := json.Unmarshal(payload, &switchConf)
 	if err != nil {
@@ -103,7 +103,7 @@ func (s *Service) onRemoveSetting(client genericNetwork.Client, msg genericNetwo
 
 func (s *Service) onUpdateSetting(client genericNetwork.Client, msg genericNetwork.Message) {
 	payload := msg.Payload()
-	rlog.Info(msg.Topic() + " : " + string(payload))
+	rlog.Debug(msg.Topic() + " : " + string(payload))
 	var switchConf sd.SwitchConfig
 	err := json.Unmarshal(payload, &switchConf)
 	if err != nil {
