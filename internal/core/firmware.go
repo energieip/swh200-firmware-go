@@ -2,6 +2,7 @@ package core
 
 import (
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
@@ -158,7 +159,35 @@ func (s *Service) Initialize(confFile string) error {
 	web := api.InitAPI(s.db, *conf)
 	s.api = web
 	rlog.Info("SwitchCore service started")
+	go s.activateGPIOs()
 	return nil
+}
+
+func (s *Service) activateGPIOs() {
+	rlog.Info("Activate KSZ Switch")
+	cmd := exec.Command("gpio", "write", "44", "1")
+	_, err := cmd.CombinedOutput()
+	if err != nil {
+		rlog.Error("gpio write 44 1 update finished with " + err.Error())
+		return
+	}
+
+	rlog.Info("Activate PSE 1 Switch")
+	cmd = exec.Command("gpio", "write", "7", "1")
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		rlog.Error("gpio write 7 1 update finished with " + err.Error())
+		return
+	}
+	time.Sleep(20 * time.Second)
+
+	rlog.Info("Activate PSE 2 Switch")
+	cmd = exec.Command("gpio", "write", "1", "1")
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		rlog.Error("gpio write 1 1 update finished with " + err.Error())
+		return
+	}
 }
 
 //Stop service

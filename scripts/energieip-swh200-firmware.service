@@ -1,6 +1,6 @@
 [Unit]
 Description=Switch Firmware service
-After=mosquitto.service rethinkdb.service network-online.target
+After=mosquitto.service rethinkdb.service network-online.target dnsmasq.service
 Wants=network-online.target
 PartOf=rethinkdb.service network-online.target mosquitto.service
 
