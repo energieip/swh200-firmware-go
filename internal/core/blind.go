@@ -114,22 +114,8 @@ func (s *Service) removeBlind(mac string) {
 }
 
 func (s *Service) updateBlindStatus(driver dblind.Blind) error {
-	var err error
-	// v, ok := s.blinds.Get(driver.Mac)
-	// if ok && v != nil {
-	// 	val := v.(dblind.Blind)
-	// 	if val == driver {
-	// 		//case no change
-	// 		return nil
-	// 	}
-	// }
-
-	// Check if the serial already exist in database (case restart process)
-	err = database.SaveBlindStatus(s.db, driver)
-	if err == nil {
-		s.blinds.Set(driver.Mac, driver)
-	}
-	return err
+	s.blinds.Set(driver.Mac, driver)
+	return nil
 }
 
 func (s *Service) prepareBlindSetup(driver dblind.BlindSetup) {

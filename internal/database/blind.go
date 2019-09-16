@@ -25,12 +25,6 @@ func GetBlindConfig(db Database, mac string) (*dblind.BlindSetup, string) {
 	return driver, dbID
 }
 
-func RemoveBlindStatus(db Database, mac string) error {
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = mac
-	return db.DeleteRecord(pconst.DbStatus, pconst.TbBlinds, criteria)
-}
-
 func GetConfigBlind(db Database, mac string) *dblind.BlindSetup {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
@@ -43,29 +37,6 @@ func GetConfigBlind(db Database, mac string) *dblind.BlindSetup {
 		return nil
 	}
 	return driver
-}
-
-func GetStatusBlinds(db Database) map[string]dblind.Blind {
-	drivers := make(map[string]dblind.Blind)
-	stored, err := db.FetchAllRecords(pconst.DbStatus, pconst.TbBlinds)
-	if err != nil || stored == nil {
-		return drivers
-	}
-	for _, v := range stored {
-		driver, err := dblind.ToBlind(v)
-		if err != nil {
-			continue
-		}
-		drivers[driver.Mac] = *driver
-	}
-	return drivers
-}
-
-//SaveBlindStatus dump blind status in database
-func SaveBlindStatus(db Database, cfg dblind.Blind) error {
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = cfg.Mac
-	return SaveOnUpdateObject(db, cfg, pconst.DbStatus, pconst.TbBlinds, criteria)
 }
 
 //SaveBlindConfig dump blind config in database

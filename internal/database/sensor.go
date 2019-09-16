@@ -25,28 +25,6 @@ func GetSensorConfig(db Database, mac string) (*ds.SensorSetup, string) {
 	return driver, dbID
 }
 
-func RemoveSensorStatus(db Database, mac string) error {
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = mac
-	return db.DeleteRecord(pconst.DbStatus, pconst.TbSensors, criteria)
-}
-
-func GetStatusSensors(db Database) map[string]ds.Sensor {
-	sensors := make(map[string]ds.Sensor)
-	stored, err := db.FetchAllRecords(pconst.DbStatus, pconst.TbSensors)
-	if err != nil || stored == nil {
-		return sensors
-	}
-	for _, v := range stored {
-		cell, err := ds.ToSensor(v)
-		if err != nil {
-			continue
-		}
-		sensors[cell.Mac] = *cell
-	}
-	return sensors
-}
-
 func GetConfigSensor(db Database, mac string) *ds.SensorSetup {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
@@ -59,13 +37,6 @@ func GetConfigSensor(db Database, mac string) *ds.SensorSetup {
 		return nil
 	}
 	return sensor
-}
-
-//SaveSensorStatus dump sensor status in database
-func SaveSensorStatus(db Database, cfg ds.Sensor) error {
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = cfg.Mac
-	return SaveOnUpdateObject(db, cfg, pconst.DbStatus, pconst.TbSensors, criteria)
 }
 
 //SaveSensorConfig dump sensor config in database

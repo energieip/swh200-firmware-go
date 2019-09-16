@@ -6,28 +6,6 @@ import (
 	"github.com/romana/rlog"
 )
 
-func GetStatusGroup(db Database) map[int]gm.GroupStatus {
-	groups := make(map[int]gm.GroupStatus)
-	stored, err := db.FetchAllRecords(pconst.DbStatus, pconst.TbGroups)
-	if err != nil || stored == nil {
-		return groups
-	}
-	for _, v := range stored {
-		group, err := gm.ToGroupStatus(v)
-		if err != nil {
-			continue
-		}
-		groups[group.Group] = *group
-	}
-	return groups
-}
-
-func UpdateGroupStatus(db Database, status gm.GroupStatus) error {
-	criteria := make(map[string]interface{})
-	criteria["Group"] = status.Group
-	return SaveOnUpdateObject(db, status, pconst.DbStatus, pconst.TbGroups, criteria)
-}
-
 func UpdateGroupConfig(db Database, cfg gm.GroupConfig) error {
 	criteria := make(map[string]interface{})
 	criteria["Group"] = cfg.Group

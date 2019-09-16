@@ -73,24 +73,8 @@ func (s *Service) removeHvac(mac string) {
 }
 
 func (s *Service) updateHvacStatus(driver dhvac.Hvac) error {
-	var err error
-	val, ok := s.hvacs.Get(driver.Mac)
-	if ok {
-		ref := val.(dhvac.Hvac)
-		if ref == driver {
-			//case no change
-			return nil
-		}
-	}
-
-	// Check if the serial already exist in database (case restart process)
-	criteria := make(map[string]interface{})
-	criteria["Mac"] = driver.Mac
-	err = database.SaveOnUpdateObject(s.db, driver, pconst.DbStatus, pconst.TbHvacs, criteria)
-	if err == nil {
-		s.hvacs.Set(driver.Mac, driver)
-	}
-	return err
+	s.hvacs.Set(driver.Mac, driver)
+	return nil
 }
 
 func (s *Service) prepareHvacSetup(driver dhvac.HvacSetup) {
@@ -167,9 +151,5 @@ func (s *Service) onHvacStatus(client network.Client, msg network.Message) {
 	s.driversSeen.Set(driver.Mac, time.Now().UTC())
 	driver.SwitchMac = s.mac
 
-	err = s.updateHvacStatus(driver)
-	if err != nil {
-		rlog.Error("Error during database update ", err.Error())
-		return
-	}
+	s.updateHvacStatus(driver)
 }

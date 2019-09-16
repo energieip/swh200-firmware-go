@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"sync"
 
 	"github.com/energieip/common-components-go/pkg/dswitch"
 	pkg "github.com/energieip/common-components-go/pkg/service"
@@ -14,13 +13,13 @@ import (
 
 type API struct {
 	db             database.Database
-	apiMutex       sync.Mutex
 	certificate    string
 	keyfile        string
 	apiIP          string
 	apiPort        string
 	apiPassword    string
 	browsingFolder string
+	consumption    *dswitch.SwitchConsumptions
 }
 
 type APIInfo struct {
@@ -42,7 +41,7 @@ func (api *API) getAPIs(w http.ResponseWriter, req *http.Request) {
 }
 
 //InitAPI start API connection
-func InitAPI(db database.Database, conf pkg.ServiceConfig) *API {
+func InitAPI(db database.Database, conf pkg.ServiceConfig, conso *dswitch.SwitchConsumptions) *API {
 	api := API{
 		db:             db,
 		certificate:    conf.ExternalAPI.CertPath,
@@ -51,6 +50,7 @@ func InitAPI(db database.Database, conf pkg.ServiceConfig) *API {
 		apiPassword:    conf.ExternalAPI.Password,
 		apiPort:        conf.ExternalAPI.Port,
 		browsingFolder: conf.ExternalAPI.BrowsingFolder,
+		consumption:    conso,
 	}
 	go api.swagger()
 	return &api
@@ -74,10 +74,7 @@ func (api *API) getFunctions(w http.ResponseWriter, req *http.Request) {
 func (api *API) getV1Functions(w http.ResponseWriter, req *http.Request) {
 	api.setDefaultHeader(w)
 	apiV1 := "/v1.0"
-	functions := []string{apiV1 + "/status/consumptions",
-		apiV1 + "/status/consumption/leds",
-		apiV1 + "/status/consumption/blinds",
-		apiV1 + "/status/consumption/hvacs"}
+	functions := []string{apiV1 + "/status/consumptions"}
 	apiInfo := APIFunctions{
 		Functions: functions,
 	}
@@ -87,79 +84,12 @@ func (api *API) getV1Functions(w http.ResponseWriter, req *http.Request) {
 
 func (api *API) getV1Consumptions(w http.ResponseWriter, req *http.Request) {
 	api.setDefaultHeader(w)
-	power := 0
-	leds := 0
-	blinds := 0
-	hvacs := 0
-
-	for _, driver := range database.GetStatusBlinds(api.db) {
-		power += driver.LinePower
-		blinds += driver.LinePower
-	}
-
-	for _, driver := range database.GetStatusLeds(api.db) {
-		power += driver.LinePower
-		leds += driver.LinePower
-	}
-
-	for _, driver := range database.GetStatusHvacs(api.db) {
-		power += driver.LinePower
-		hvacs += driver.LinePower
-	}
-
-	conso := dswitch.SwitchConsumptions{
-		TotalPower:    power,
-		LightingPower: leds,
-		BlindPower:    blinds,
-		HvacPower:     hvacs,
-	}
-	inrec, _ := json.MarshalIndent(conso, "", "  ")
+	inrec, _ := json.MarshalIndent(api.consumption, "", "  ")
 	w.Write(inrec)
 }
 
 type APIV1Consumption struct {
 	Power int `json:"power"`
-}
-
-func (api *API) getV1LightingConsumptions(w http.ResponseWriter, req *http.Request) {
-	api.setDefaultHeader(w)
-	power := 0
-
-	for _, driver := range database.GetStatusLeds(api.db) {
-		power += driver.LinePower
-	}
-
-	conso := APIV1Consumption{
-		Power: power,
-	}
-	inrec, _ := json.MarshalIndent(conso, "", "  ")
-	w.Write(inrec)
-}
-
-func (api *API) getV1BlindConsumptions(w http.ResponseWriter, req *http.Request) {
-	api.setDefaultHeader(w)
-	power := 0
-
-	for _, driver := range database.GetStatusBlinds(api.db) {
-		power += driver.LinePower
-	}
-
-	conso := APIV1Consumption{
-		Power: power,
-	}
-	inrec, _ := json.MarshalIndent(conso, "", "  ")
-	w.Write(inrec)
-}
-
-func (api *API) getV1HVACConsumptions(w http.ResponseWriter, req *http.Request) {
-	api.setDefaultHeader(w)
-	power := 0
-
-	conso := APIV1Consumption{
-		Power: power,
-	}
-	inrec, _ := json.MarshalIndent(conso, "", "  ")
-	w.Write(inrec)
 }
 
 func (api *API) swagger() {
@@ -173,9 +103,6 @@ func (api *API) swagger() {
 
 	//status
 	router.HandleFunc(apiV1+"/status/consumptions", api.getV1Consumptions).Methods("GET")
-	router.HandleFunc(apiV1+"/status/consumption/leds", api.getV1LightingConsumptions).Methods("GET")
-	router.HandleFunc(apiV1+"/status/consumption/blinds", api.getV1BlindConsumptions).Methods("GET")
-	router.HandleFunc(apiV1+"/status/consumption/hvacs", api.getV1HVACConsumptions).Methods("GET")
 
 	//unversionned API
 	router.HandleFunc("/versions", api.getAPIs).Methods("GET")

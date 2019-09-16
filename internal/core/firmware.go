@@ -7,7 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/energieip/common-components-go/pkg/dgroup"
+
 	"github.com/energieip/common-components-go/pkg/dnanosense"
+	"github.com/energieip/common-components-go/pkg/dswitch"
 
 	"github.com/energieip/common-components-go/pkg/dwago"
 
@@ -64,9 +67,11 @@ type Service struct {
 	nanos                 cmap.ConcurrentMap
 	wagos                 cmap.ConcurrentMap
 	hvacs                 cmap.ConcurrentMap
+	groupStatus           cmap.ConcurrentMap
 	conf                  pkg.ServiceConfig
 	driversSeen           cmap.ConcurrentMap
 	api                   *api.API
+	consumption           *dswitch.SwitchConsumptions
 }
 
 //Initialize service
@@ -79,9 +84,12 @@ func (s *Service) Initialize(confFile string) error {
 	s.hvacs = cmap.New()
 	s.nanos = cmap.New()
 	s.wagos = cmap.New()
+	s.groupStatus = cmap.New()
 	s.groups = make(map[int]Group)
 	s.cluster = make(map[string]ClusterNetwork)
 	s.driversSeen = cmap.New()
+	conso := dswitch.SwitchConsumptions{}
+	s.consumption = &conso
 
 	conf, err := pkg.ReadServiceConfig(confFile)
 	if err != nil {
@@ -156,7 +164,7 @@ func (s *Service) Initialize(confFile string) error {
 	}
 
 	go s.remoteServerConnection()
-	web := api.InitAPI(s.db, *conf)
+	web := api.InitAPI(s.db, *conf, s.consumption)
 	s.api = web
 	rlog.Info("SwitchCore service started")
 	go s.activateGPIOs()
@@ -255,12 +263,6 @@ func (s *Service) sendDump() {
 
 	status.Services = services
 	timeNow := time.Now().UTC()
-	leds := database.GetStatusLeds(s.db)
-	sensors := database.GetStatusSensors(s.db)
-	blinds := database.GetStatusBlinds(s.db)
-	hvacs := database.GetStatusHvacs(s.db)
-	wagos := database.GetStatusWagos(s.db)
-	nanos := database.GetStatusNanos(s.db)
 
 	dumpSensors := make(map[string]ds.Sensor)
 	dumpLeds := make(map[string]dl.Led)
@@ -268,12 +270,17 @@ func (s *Service) sendDump() {
 	dumpHvacs := make(map[string]dhvac.Hvac)
 	dumpWagos := make(map[string]dwago.Wago)
 	dumpNanos := make(map[string]dnanosense.Nanosense)
-	for _, driver := range leds {
+	dumpGroups := make(map[int]dgroup.GroupStatus)
+	for _, dr := range s.leds.Items() {
+		driver, err := dl.ToLed(dr)
+		if err != nil {
+			continue
+		}
 		val, ok := s.driversSeen.Get(driver.Mac)
 		if ok && val != nil {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
-				dumpLeds[driver.Mac] = driver
+				dumpLeds[driver.Mac] = *driver
 				ledsPower += int64(driver.LinePower)
 				totalPower += int64(driver.LinePower)
 				continue
@@ -285,7 +292,6 @@ func (s *Service) sendDump() {
 				if ok {
 					delete(s.ledsToAuto, driver.Mac)
 				}
-				database.RemoveLedStatus(s.db, driver.Mac)
 			}
 		} else {
 			_, ok := s.leds.Get(driver.Mac)
@@ -296,19 +302,22 @@ func (s *Service) sendDump() {
 	}
 	status.Leds = dumpLeds
 
-	for _, driver := range sensors {
+	for _, dr := range s.sensors.Items() {
+		driver, err := ds.ToSensor(dr)
+		if err != nil {
+			continue
+		}
 		val, ok := s.driversSeen.Get(driver.Mac)
 		if ok && val != nil {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
-				dumpSensors[driver.Mac] = driver
+				dumpSensors[driver.Mac] = *driver
 				continue
 			} else {
 				rlog.Warn("Sensor " + driver.Mac + " no longer seen; drop it")
-				s.sendInvalidStatus(driver)
+				s.sendInvalidStatus(*driver)
 				s.sensors.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
-				database.RemoveSensorStatus(s.db, driver.Mac)
 			}
 		} else {
 			_, ok := s.sensors.Get(driver.Mac)
@@ -319,21 +328,24 @@ func (s *Service) sendDump() {
 	}
 	status.Sensors = dumpSensors
 
-	for _, driver := range blinds {
+	for _, dr := range s.blinds.Items() {
+		driver, err := dblind.ToBlind(dr)
+		if err != nil {
+			continue
+		}
 		val, ok := s.driversSeen.Get(driver.Mac)
 		if ok && val != nil {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
-				dumpBlinds[driver.Mac] = driver
+				dumpBlinds[driver.Mac] = *driver
 				blindsPower += int64(driver.LinePower)
 				totalPower += int64(driver.LinePower)
 				continue
 			} else {
 				rlog.Warn("Blind " + driver.Mac + " no longer seen; drop it")
-				s.sendInvalidBlindStatus(driver)
+				s.sendInvalidBlindStatus(*driver)
 				s.blinds.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
-				database.RemoveBlindStatus(s.db, driver.Mac)
 			}
 		} else {
 			_, ok := s.blinds.Get(driver.Mac)
@@ -344,12 +356,16 @@ func (s *Service) sendDump() {
 	}
 	status.Blinds = dumpBlinds
 
-	for _, driver := range hvacs {
+	for _, dr := range s.hvacs.Items() {
+		driver, err := dhvac.ToHvac(dr)
+		if err != nil {
+			continue
+		}
 		val, ok := s.driversSeen.Get(driver.Mac)
 		if ok && val != nil {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
-				dumpHvacs[driver.Mac] = driver
+				dumpHvacs[driver.Mac] = *driver
 				hvacsPower += int64(driver.LinePower)
 				totalPower += int64(driver.LinePower)
 				continue
@@ -357,7 +373,6 @@ func (s *Service) sendDump() {
 				rlog.Warn("HVAC " + driver.Mac + " no longer seen; drop it")
 				s.hvacs.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
-				database.RemoveHvacStatus(s.db, driver.Mac)
 			}
 		} else {
 			_, ok := s.hvacs.Get(driver.Mac)
@@ -368,18 +383,21 @@ func (s *Service) sendDump() {
 	}
 	status.Hvacs = dumpHvacs
 
-	for _, driver := range wagos {
+	for _, dr := range s.wagos.Items() {
+		driver, err := dwago.ToWago(dr)
+		if err != nil {
+			continue
+		}
 		val, ok := s.driversSeen.Get(driver.Mac)
 		if ok && val != nil {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
-				dumpWagos[driver.Mac] = driver
+				dumpWagos[driver.Mac] = *driver
 				continue
 			} else {
 				rlog.Warn("WAGO " + driver.Mac + " no longer seen; drop it")
 				s.wagos.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
-				database.RemoveWagoStatus(s.db, driver.Mac)
 			}
 		} else {
 			_, ok := s.wagos.Get(driver.Mac)
@@ -390,18 +408,21 @@ func (s *Service) sendDump() {
 	}
 	status.Wagos = dumpWagos
 
-	for _, driver := range nanos {
+	for _, dr := range s.nanos.Items() {
+		driver, err := dnanosense.ToNanosense(dr)
+		if err != nil {
+			continue
+		}
 		val, ok := s.driversSeen.Get(driver.Mac)
 		if ok && val != nil {
 			maxDuration := time.Duration(5*driver.DumpFrequency) * time.Millisecond
 			if timeNow.Sub(val.(time.Time)) <= maxDuration {
-				dumpNanos[driver.Mac] = driver
+				dumpNanos[driver.Mac] = *driver
 				continue
 			} else {
 				rlog.Warn("Nanos " + driver.Mac + " no longer seen; drop it")
 				s.nanos.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
-				database.RemoveNanoStatus(s.db, driver.Mac)
 			}
 		} else {
 			_, ok := s.nanos.Get(driver.Mac)
@@ -411,11 +432,24 @@ func (s *Service) sendDump() {
 		}
 	}
 	status.Nanos = dumpNanos
-	status.Groups = database.GetStatusGroup(s.db)
+
+	// status.Groups = database.GetStatusGroup(s.db)
+	for _, elt := range s.groupStatus.Items() {
+		gr, err := dgroup.ToGroupStatus(elt)
+		if err != nil {
+			continue
+		}
+		dumpGroups[gr.Group] = *gr
+	}
+	status.Groups = dumpGroups
 	status.BlindsPower = blindsPower
 	status.HvacsPower = hvacsPower
 	status.LedsPower = ledsPower
 	status.TotalPower = totalPower
+	s.consumption.BlindPower = int(blindsPower)
+	s.consumption.LightingPower = int(ledsPower)
+	s.consumption.TotalPower = int(totalPower)
+	s.consumption.HvacPower = int(hvacsPower)
 
 	dump, _ := status.ToJSON()
 	s.serverSendCommand("/read/switch/"+s.mac+"/"+UrlStatus, dump)

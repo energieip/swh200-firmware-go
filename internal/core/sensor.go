@@ -79,19 +79,8 @@ func (s *Service) sendSensorUpdate(sensor ds.SensorConf) {
 }
 
 func (s *Service) updateSensorStatus(sensor ds.Sensor) error {
-	v, ok := s.sensors.Get(sensor.Mac)
-	if ok && v != nil {
-		val := v.(ds.Sensor)
-		if val == sensor {
-			return nil
-		}
-	}
-
-	err := database.SaveSensorStatus(s.db, sensor)
-	if err == nil {
-		s.sensors.Set(sensor.Mac, sensor)
-	}
-	return err
+	s.sensors.Set(sensor.Mac, sensor)
+	return nil
 }
 
 func (s *Service) prepareSensorSetup(sensor ds.SensorSetup) {

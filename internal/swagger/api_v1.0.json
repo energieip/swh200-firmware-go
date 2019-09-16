@@ -82,84 +82,6 @@
                       }
                 }
             }
-        },
-        "/status/consumption/leds": {
-            "get": {
-                "tags": [
-                    "status"
-                ],
-                "summary": "Lighting consumptions Status",
-                "description": "Lighting consumptions Status",
-                "produces":[
-                    "application/json"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "sucessful operation",
-                        "schema":{
-                            "$ref": "#/definitions/Consumption"
-                        }
-                    },
-                    "default": {
-                        "description": "unexpected error",
-                        "schema": {
-                          "$ref": "#/definitions/Error"
-                        }
-                      }
-                }
-            }
-        },
-        "/status/consumption/blinds": {
-            "get": {
-                "tags": [
-                    "status"
-                ],
-                "summary": "Blinds consumptions Status",
-                "description": "Blinds consumptions Status",
-                "produces":[
-                    "application/json"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "sucessful operation",
-                        "schema":{
-                            "$ref": "#/definitions/Consumption"
-                        }
-                    },
-                    "default": {
-                        "description": "unexpected error",
-                        "schema": {
-                          "$ref": "#/definitions/Error"
-                        }
-                      }
-                }
-            }
-        },
-        "/status/consumption/hvacs": {
-            "get": {
-                "tags": [
-                    "status"
-                ],
-                "summary": "HVACs consumptions Status",
-                "description": "HVACs consumptions Status",
-                "produces":[
-                    "application/json"
-                ],
-                "responses": {
-                    "200": {
-                        "description": "sucessful operation",
-                        "schema":{
-                            "$ref": "#/definitions/Consumption"
-                        }
-                    },
-                    "default": {
-                        "description": "unexpected error",
-                        "schema": {
-                          "$ref": "#/definitions/Error"
-                        }
-                      }
-                }
-            }
         }
     },
     "definitions": {
@@ -190,18 +112,6 @@
                     "type": "integer",
                     "format": "int32",
                     "description": "HVAC power consumption (Watts)"
-                }
-            }
-        },
-        "Consumption" :{
-            "required": [
-                "power"
-            ],
-            "properties": {
-                "power": {
-                    "type": "integer",
-                    "format": "int32",
-                    "description": "Power consumption (Watts)"
                 }
             }
         },

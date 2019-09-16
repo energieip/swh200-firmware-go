@@ -102,22 +102,8 @@ func (s *Service) removeLed(mac string) {
 }
 
 func (s *Service) updateLedStatus(led dl.Led) error {
-	var err error
-	v, ok := s.leds.Get(led.Mac)
-	if ok && v != nil {
-		val := v.(dl.Led)
-		if val == led {
-			//case no change
-			return nil
-		}
-	}
-
-	// Check if the serial already exist in database (case restart process)
-	err = database.SaveLedStatus(s.db, led)
-	if err == nil {
-		s.leds.Set(led.Mac, led)
-	}
-	return err
+	s.leds.Set(led.Mac, led)
+	return nil
 }
 
 func (s *Service) prepareLedSetup(led dl.LedSetup) {

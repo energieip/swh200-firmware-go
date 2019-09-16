@@ -8,8 +8,6 @@ import (
 
 	"github.com/energieip/common-components-go/pkg/pconst"
 
-	"github.com/energieip/swh200-firmware-go/internal/database"
-
 	"github.com/energieip/common-components-go/pkg/dgroup"
 	gm "github.com/energieip/common-components-go/pkg/dgroup"
 	"github.com/energieip/common-components-go/pkg/network"
@@ -294,7 +292,8 @@ func (s *Service) dumpGroupStatus(group Group) error {
 		SetpointLedsFirstDay: group.FirstDaySetpoint,
 	}
 
-	return database.UpdateGroupStatus(s.db, status)
+	s.groupStatus.Set(strconv.Itoa(status.Group), status)
+	return nil
 }
 
 func (s *Service) groupRun(group *Group) error {

@@ -8,7 +8,6 @@ import (
 
 	dn "github.com/energieip/common-components-go/pkg/dnanosense"
 	"github.com/energieip/common-components-go/pkg/network"
-	"github.com/energieip/swh200-firmware-go/internal/database"
 	"github.com/romana/rlog"
 )
 
@@ -65,22 +64,8 @@ func ToNanoEvent(val interface{}) (*NanoEvent, error) {
 }
 
 func (s *Service) updateNanoStatus(driver dn.Nanosense) error {
-	var err error
-	v, ok := s.nanos.Get(driver.Mac)
-	if ok && v != nil {
-		val := v.(dn.Nanosense)
-		if val == driver {
-			//case no change
-			return nil
-		}
-	}
-
-	// Check if the serial already exist in database (case restart process)
-	err = database.SaveNanoStatus(s.db, driver)
-	if err == nil {
-		s.nanos.Set(driver.Mac, driver)
-	}
-	return err
+	s.nanos.Set(driver.Mac, driver)
+	return nil
 }
 
 func (s *Service) sendInvalidNanoStatus(driver dn.Nanosense) {
