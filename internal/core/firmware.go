@@ -650,6 +650,8 @@ func (s *Service) cronDump() {
 			} else {
 				s.sendHello()
 			}
+			timerDump.Stop()
+			timerDump = time.NewTicker(s.timerDump * time.Millisecond)
 		}
 	}
 }
