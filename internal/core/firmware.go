@@ -236,6 +236,7 @@ func (s *Service) sendDump() {
 
 	status := sd.SwitchStatus{}
 	status.Mac = s.mac
+	status.DumpFrequency = int(s.timerDump)
 	status.Cluster = s.clusterID
 	status.Label = &s.label
 	status.Profil = s.profil
