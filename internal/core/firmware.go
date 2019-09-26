@@ -604,6 +604,20 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 			go s.remoteClusterConnection(cl.IP, client)
 		}
 	}
+
+	cluster := 0
+	if switchConfig.Cluster != nil {
+		cluster = *switchConfig.Cluster
+	}
+	elt := sd.SwitchDefinition{
+		IP:            switchConfig.IP,
+		FriendlyName:  switchConfig.FriendlyName,
+		Label:         switchConfig.Label,
+		Profil:        switchConfig.Profil,
+		Cluster:       cluster,
+		DumpFrequency: switchConfig.DumpFrequency,
+	}
+	database.UpdateSwitchConfig(s.db, elt)
 }
 
 func (s *Service) removeConfiguration(switchConfig sd.SwitchConfig) {

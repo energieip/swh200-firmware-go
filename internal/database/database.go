@@ -7,6 +7,7 @@ import (
 	"github.com/energieip/common-components-go/pkg/dhvac"
 	dl "github.com/energieip/common-components-go/pkg/dled"
 	ds "github.com/energieip/common-components-go/pkg/dsensor"
+	sd "github.com/energieip/common-components-go/pkg/dswitch"
 	"github.com/energieip/common-components-go/pkg/duser"
 	"github.com/energieip/common-components-go/pkg/dwago"
 	"github.com/energieip/common-components-go/pkg/pconst"
@@ -59,6 +60,7 @@ func prepareDB(db Database, withDrop bool) {
 			tableCfg[TableCluster] = pkg.Broker{}
 			tableCfg[pconst.TbHvacs] = dhvac.HvacSetup{}
 			tableCfg[AccessTable] = duser.UserAccess{}
+			tableCfg[pconst.TbSwitchs] = sd.SwitchDefinition{}
 		}
 		for tableName, objs := range tableCfg {
 			if withDrop {
