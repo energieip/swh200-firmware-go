@@ -198,6 +198,41 @@ func (s *Service) activateGPIOs() {
 	}
 }
 
+func (s *Service) resetPSE() {
+	rlog.Info("Down PSE 1 Switch")
+	cmd := exec.Command("gpio", "write", "7", "0")
+	_, err := cmd.CombinedOutput()
+	if err != nil {
+		rlog.Error("gpio write 7 1 update finished with " + err.Error())
+		return
+	}
+
+	rlog.Info("Down PSE 2 Switch")
+	cmd = exec.Command("gpio", "write", "1", "0")
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		rlog.Error("gpio write 1 1 update finished with " + err.Error())
+		return
+	}
+
+	rlog.Info("Activate PSE 1 Switch")
+	cmd = exec.Command("gpio", "write", "7", "1")
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		rlog.Error("gpio write 7 1 update finished with " + err.Error())
+		return
+	}
+	time.Sleep(20 * time.Second)
+
+	rlog.Info("Activate PSE 2 Switch")
+	cmd = exec.Command("gpio", "write", "1", "1")
+	_, err = cmd.CombinedOutput()
+	if err != nil {
+		rlog.Error("gpio write 1 1 update finished with " + err.Error())
+		return
+	}
+}
+
 //Stop service
 func (s *Service) Stop() {
 	rlog.Info("Stopping SwitchCore service")
@@ -721,6 +756,7 @@ func (s *Service) Run() error {
 								s.removeClusterMember(mac)
 							}
 							database.ResetDB(s.db)
+							s.resetPSE()
 						}
 					}
 					if !s.isConfigured {
