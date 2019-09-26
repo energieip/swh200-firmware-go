@@ -192,68 +192,6 @@ func (s *Service) baesManagement() {
 	}
 }
 
-func (s *Service) activateGPIOs() {
-	rlog.Info("Activate KSZ Switch")
-	cmd := exec.Command("gpio", "write", "44", "1")
-	_, err := cmd.CombinedOutput()
-	if err != nil {
-		rlog.Error("gpio write 44 1 update finished with " + err.Error())
-		return
-	}
-
-	rlog.Info("Activate PSE 1 Switch")
-	cmd = exec.Command("gpio", "write", "7", "1")
-	_, err = cmd.CombinedOutput()
-	if err != nil {
-		rlog.Error("gpio write 7 1 update finished with " + err.Error())
-		return
-	}
-	time.Sleep(20 * time.Second)
-
-	rlog.Info("Activate PSE 2 Switch")
-	cmd = exec.Command("gpio", "write", "1", "1")
-	_, err = cmd.CombinedOutput()
-	if err != nil {
-		rlog.Error("gpio write 1 1 update finished with " + err.Error())
-		return
-	}
-}
-
-func (s *Service) resetPSE() {
-	rlog.Info("Down PSE 1 Switch")
-	cmd := exec.Command("gpio", "write", "7", "0")
-	_, err := cmd.CombinedOutput()
-	if err != nil {
-		rlog.Error("gpio write 7 1 update finished with " + err.Error())
-		return
-	}
-
-	rlog.Info("Down PSE 2 Switch")
-	cmd = exec.Command("gpio", "write", "1", "0")
-	_, err = cmd.CombinedOutput()
-	if err != nil {
-		rlog.Error("gpio write 1 1 update finished with " + err.Error())
-		return
-	}
-
-	rlog.Info("Activate PSE 1 Switch")
-	cmd = exec.Command("gpio", "write", "7", "1")
-	_, err = cmd.CombinedOutput()
-	if err != nil {
-		rlog.Error("gpio write 7 1 update finished with " + err.Error())
-		return
-	}
-	time.Sleep(20 * time.Second)
-
-	rlog.Info("Activate PSE 2 Switch")
-	cmd = exec.Command("gpio", "write", "1", "1")
-	_, err = cmd.CombinedOutput()
-	if err != nil {
-		rlog.Error("gpio write 1 1 update finished with " + err.Error())
-		return
-	}
-}
-
 //Stop service
 func (s *Service) Stop() {
 	rlog.Info("Stopping SwitchCore service")
@@ -490,7 +428,6 @@ func (s *Service) sendDump() {
 	}
 	status.Nanos = dumpNanos
 
-	// status.Groups = database.GetStatusGroup(s.db)
 	for _, elt := range s.groupStatus.Items() {
 		gr, err := dgroup.ToGroupStatus(elt)
 		if err != nil {
@@ -503,6 +440,14 @@ func (s *Service) sendDump() {
 	status.HvacsPower = hvacsPower
 	status.LedsPower = ledsPower
 	status.TotalPower = totalPower
+
+	gpioStatus := s.getGPIOStates()
+	status.StateBaes = gpioStatus[0]
+	status.StatePuls1 = gpioStatus[1]
+	status.StatePuls2 = gpioStatus[2]
+	status.StatePuls3 = gpioStatus[3]
+	status.StatePuls4 = gpioStatus[4]
+	status.StatePuls5 = gpioStatus[5]
 	s.consumption.BlindPower = int(blindsPower)
 	s.consumption.LightingPower = int(ledsPower)
 	s.consumption.TotalPower = int(totalPower)
