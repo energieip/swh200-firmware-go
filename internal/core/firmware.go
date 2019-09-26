@@ -72,6 +72,7 @@ type Service struct {
 	driversSeen           cmap.ConcurrentMap
 	api                   *api.API
 	consumption           *dswitch.SwitchConsumptions
+	expectedLeds          int //for BAES control
 }
 
 //Initialize service
@@ -124,6 +125,8 @@ func (s *Service) Initialize(confFile string) error {
 		rlog.Info("Restore group ", grID)
 		s.createGroup(group)
 	}
+	leds := database.GetLedsConfig(s.db)
+	s.expectedLeds = len(leds)
 
 	err = s.createServerNetwork()
 	if err != nil {
@@ -168,7 +171,25 @@ func (s *Service) Initialize(confFile string) error {
 	s.api = web
 	rlog.Info("SwitchCore service started")
 	go s.activateGPIOs()
+	go s.baesManagement()
 	return nil
+}
+
+func (s *Service) baesManagement() {
+	min := (s.expectedLeds * 90) / 100
+	for {
+		time.Sleep(5 * time.Second)
+		if s.leds.Count() >= min {
+			rlog.Info("Switch is ready switch BAES off")
+			cmd := exec.Command("gpio", "write", "43", "1")
+			_, err := cmd.CombinedOutput()
+			if err != nil {
+				rlog.Error("gpio write 43 1 update finished with " + err.Error())
+				return
+			}
+			break
+		}
+	}
 }
 
 func (s *Service) activateGPIOs() {

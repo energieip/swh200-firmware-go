@@ -3,7 +3,6 @@ package database
 import (
 	gm "github.com/energieip/common-components-go/pkg/dgroup"
 	"github.com/energieip/common-components-go/pkg/pconst"
-	"github.com/romana/rlog"
 )
 
 func UpdateGroupConfig(db Database, cfg gm.GroupConfig) error {
@@ -15,7 +14,6 @@ func UpdateGroupConfig(db Database, cfg gm.GroupConfig) error {
 func GetGroupsConfig(db Database) map[int]gm.GroupConfig {
 	groups := make(map[int]gm.GroupConfig)
 	stored, err := db.FetchAllRecords(pconst.DbConfig, pconst.TbGroups)
-	rlog.Info("==== stored , err", stored, err)
 	if err != nil || stored == nil {
 		return groups
 	}
