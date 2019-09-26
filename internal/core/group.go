@@ -1090,6 +1090,9 @@ func (s *Service) onGroupCommand(client network.Client, msg network.Message) {
 		return
 	}
 	grID := cmd.Group
+	// Note send the same command in the cluster
+	topic := "/write/group/" + strconv.Itoa(grID) + "/commands"
+	s.localSendCommand(topic, payloadStr)
 	if _, ok := s.groups[grID]; !ok {
 		rlog.Info("Group " + strconv.Itoa(grID) + " not running on this switch skip it")
 		return
