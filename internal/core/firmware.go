@@ -617,7 +617,7 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 		Cluster:       cluster,
 		DumpFrequency: switchConfig.DumpFrequency,
 	}
-	database.UpdateSwitchConfig(s.db, elt)
+	s.updateIPConfig(switchConfig.IP, elt)
 }
 
 func (s *Service) removeConfiguration(switchConfig sd.SwitchConfig) {
