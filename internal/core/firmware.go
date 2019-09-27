@@ -458,6 +458,9 @@ func (s *Service) sendDump() {
 }
 
 func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
+	if switchConfig.DumpFrequency == 0 {
+		switchConfig.DumpFrequency = DefaultTimerDump
+	}
 	s.timerDump = time.Duration(switchConfig.DumpFrequency)
 	for _, led := range switchConfig.LedsSetup {
 		s.prepareLedSetup(led)
