@@ -53,7 +53,7 @@ func (s *Service) updateIPConfig(ip string, elt sd.SwitchDefinition) {
 		copyFile(Reference, Configuration)
 		database.UpdateSwitchConfig(s.db, elt)
 		rlog.Info("Restart Switch to switch in DHCP mode")
-		time.Sleep(10 * time.Second)
+		time.Sleep(5 * time.Second)
 		cmd := exec.Command("reboot")
 		_, err := cmd.CombinedOutput()
 		if err != nil {
@@ -84,7 +84,7 @@ func (s *Service) updateIPConfig(ip string, elt sd.SwitchDefinition) {
 	time.Sleep(1 * time.Second)
 	copyFile(Temp, Configuration)
 	database.UpdateSwitchConfig(s.db, elt)
-	time.Sleep(10 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	rlog.Info("Restart Switch")
 	cmd := exec.Command("reboot")
