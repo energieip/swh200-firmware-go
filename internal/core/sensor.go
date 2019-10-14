@@ -169,11 +169,24 @@ func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 	sensor.Mac = strings.ToUpper(sensor.Mac)
 	s.driversSeen.Set(sensor.Mac, time.Now().UTC())
 	sensor.SwitchMac = s.mac
-	// apply brightness correction Factor
-	sensor.Brightness = sensor.BrightnessRaw / sensor.BrightnessCorrectionFactor
+	sensor.Brightness = sensor.BrightnessRaw
 	cfg := database.GetConfigSensor(s.db, sensor.Mac)
 	if cfg != nil {
 		sensor.Label = cfg.Label
+		// apply brightness correction Factor
+		factor := 1
+		if cfg.BrightnessCorrectionFactor != nil {
+			factor = *cfg.BrightnessCorrectionFactor
+		}
+		if factor != 0 {
+			sensor.Brightness = sensor.BrightnessRaw * factor
+		}
+		// apply brightness correction Offset
+		offset := 0
+		if cfg.BrightnessCorrectionOffset != nil {
+			offset = *cfg.BrightnessCorrectionOffset
+		}
+		sensor.Brightness = sensor.Brightness + offset
 	}
 
 	err = s.updateSensorStatus(sensor)

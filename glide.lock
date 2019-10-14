@@ -1,5 +1,5 @@
 hash: d411425b4f9db07589085d22323989d1ba481bfb0dd3cddbcc5288ab094b4b65
-updated: 2019-09-04T09:45:20.281198327+02:00
+updated: 2019-10-14T15:33:28.581392981+02:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 2146c93394225c3732078705043ce9f26584d334
@@ -8,7 +8,7 @@ imports:
   subpackages:
   - packets
 - name: github.com/energieip/common-components-go
-  version: cfe304fd7b9d6def060fa7248dce2f1554aa137e
+  version: e5a8d3f2f59c87758882b82c2d2e54e98f238772
   subpackages:
   - pkg/database
   - pkg/dblind
@@ -25,7 +25,7 @@ imports:
   - pkg/service
   - pkg/tools
 - name: github.com/golang/protobuf
-  version: 822fe56949f5d56c9e2f02367c657e0e9b4d27d1
+  version: 1680a479a2cfb3fa22b972af7e36d0a0fde47bf8
   subpackages:
   - proto
 - name: github.com/gorilla/mux
@@ -37,7 +37,7 @@ imports:
 - name: github.com/konsorten/go-windows-terminal-sequences
   version: f55edac94c9bbba5d6182a4be46d86a2c9b5b50e
 - name: github.com/opentracing/opentracing-go
-  version: 94e0bdd2b1d9c6803a9729f999cdaed72f5a361d
+  version: a7454ce5950e83caac9774ef32cc8979e5975f30
   subpackages:
   - ext
   - log
@@ -46,19 +46,19 @@ imports:
 - name: github.com/romana/rlog
   version: f018bc92e7d71f27c04e04cbf008860416c21d01
 - name: github.com/sirupsen/logrus
-  version: de736cf91b921d56253b4010270681d33fdf7cb5
+  version: d12cdc065f60fad310aec12d82e57208a0cfee52
 - name: golang.org/x/crypto
-  version: 9756ffdc24725223350eb3266ffb92590d28f278
+  version: 87dc89f01550277dc22b74ffcf4cd89fa2f40f4c
   subpackages:
   - pbkdf2
 - name: golang.org/x/net
-  version: ba9fcec4b297b415637633c5a6e8fa592e4a16c3
+  version: 491137f692577e390404f177a0515c9f86f79754
   subpackages:
   - context
   - internal/socks
   - proxy
 - name: golang.org/x/sys
-  version: 43c01164e93111c754a278ab423ba01063c44917
+  version: b09406accb4736d857a32bf9444cd7edae2ffa79
   subpackages:
   - unix
 - name: gopkg.in/fatih/pool.v2

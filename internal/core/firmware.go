@@ -1,6 +1,7 @@
 package core
 
 import (
+	"math/rand"
 	"os"
 	"os/exec"
 	"strconv"
@@ -708,6 +709,9 @@ func (s *Service) systemUpdate(switchConfig sd.SwitchConfig) {
 
 //Run service mainloop
 func (s *Service) Run() error {
+	rand.Seed(time.Now().UTC().UnixNano())
+	delay := rand.Int63n(50)
+	time.Sleep(time.Duration(delay) * time.Millisecond)
 	s.sendHello()
 	go s.cronDump()
 	go s.cronLedMode()
