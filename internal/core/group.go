@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/energieip/common-components-go/pkg/dhvac"
 	"github.com/energieip/common-components-go/pkg/pconst"
 
 	"github.com/energieip/common-components-go/pkg/dgroup"
@@ -16,11 +17,13 @@ import (
 )
 
 const (
-	EventChange = "change"
-	EventStop   = "stop"
-	EventManual = "manual"
-	EventBlind  = "blind"
-	EventHvac   = "hvac"
+	EventChange       = "change"
+	EventStop         = "stop"
+	EventManual       = "manual"
+	EventBlind        = "blind"
+	EventHvac         = "hvac"
+	EventHvacConfig   = "hvacConfig"
+	EventResetDrivers = "resetDrivers"
 )
 
 // Group logical
@@ -44,6 +47,8 @@ type Group struct {
 	BlindsIssue        cmap.ConcurrentMap
 	Nanosenses         cmap.ConcurrentMap
 	NanosensesIssue    cmap.ConcurrentMap
+	Hvacs              cmap.ConcurrentMap
+	HvacsIssue         cmap.ConcurrentMap
 	FirstDay           cmap.ConcurrentMap
 	SetpointBlinds     *int
 	SetpointSlatBlinds *int
@@ -56,6 +61,42 @@ type Group struct {
 	Hygrometry         int
 	CO2                int
 	COV                int
+	OccupCool          int
+	OccupHeat          int
+	UnoccupHeat        int
+	UnoccupCool        int
+	StandbyHeat        int
+	StandbyCool        int
+	HvacsEffectMode    int
+}
+
+func (s *Service) onGroupHvacEvent(client network.Client, msg network.Message) {
+	rlog.Debug(msg.Topic() + " : " + string(msg.Payload()))
+	sGrID := strings.Split(msg.Topic(), "/")[3]
+	grID, err := strconv.Atoi(sGrID)
+	if err != nil {
+		return
+	}
+
+	group, ok := s.groups[grID]
+	if !ok {
+		rlog.Debug("Skip group")
+		return
+	}
+
+	var hvac HvacEvent
+	err = json.Unmarshal(msg.Payload(), &hvac)
+	if err != nil {
+		rlog.Error("Error during parsing", err.Error())
+		return
+	}
+
+	group.Hvacs.Set(hvac.Mac, hvac)
+	_, ok = group.HvacsIssue.Get(hvac.Mac)
+	if ok {
+		//hvac no longer problematic
+		group.HvacsIssue.Remove(hvac.Mac)
+	}
 }
 
 func (s *Service) onGroupSensorEvent(client network.Client, msg network.Message) {
@@ -169,6 +210,30 @@ func (s *Service) onGroupErrorEvent(client network.Client, msg network.Message) 
 	group.SensorsIssue.Set(sensor.Mac, true)
 }
 
+func (s *Service) onGroupHvacErrorEvent(client network.Client, msg network.Message) {
+	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
+	sGrID := strings.Split(msg.Topic(), "/")[3]
+	grID, err := strconv.Atoi(sGrID)
+	if err != nil {
+		return
+	}
+
+	group, ok := s.groups[grID]
+	if !ok {
+		rlog.Debug("Skip group")
+		return
+	}
+
+	var driver HvacErrorEvent
+	err = json.Unmarshal(msg.Payload(), &driver)
+	if err != nil {
+		rlog.Error("Error during parsing", err.Error())
+		return
+	}
+
+	group.HvacsIssue.Set(driver.Mac, true)
+}
+
 func (s *Service) onGroupBlindErrorEvent(client network.Client, msg network.Message) {
 	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
 	sGrID := strings.Split(msg.Topic(), "/")[3]
@@ -256,40 +321,58 @@ func (s *Service) dumpGroupStatus(group Group) error {
 	if group.Runtime.Watchdog != nil {
 		watchdog = *group.Runtime.Watchdog
 	}
+	tempShift := 0
+	if group.Runtime.SetpointTempOffset != nil {
+		tempShift = *group.Runtime.SetpointTempOffset
+	}
+	targetMode := 0
+	if group.Runtime.HvacsTargetMode != nil {
+		targetMode = *group.Runtime.HvacsTargetMode
+	}
+
 	status := gm.GroupStatus{
-		Group:                group.Runtime.Group,
-		Auto:                 auto,
-		TimeToAuto:           group.TimeToAuto,
-		SensorRule:           sensorRule,
-		Error:                group.Error,
-		Presence:             group.Presence,
-		WindowsOpened:        group.Opened,
-		TimeToLeave:          group.PresenceTimeout,
-		CorrectionInterval:   correctionInterval,
-		SetpointLeds:         group.Setpoint,
-		SlopeStartAuto:       slopeStartAuto,
-		SlopeStartManual:     slopeStartManual,
-		SlopeStopAuto:        slopeStopAuto,
-		SlopeStopManual:      slopeStopManual,
-		Brightness:           group.Brightness,
-		CeilingTemperature:   group.CeilingTemperature,
-		CeilingHumidity:      group.CeilingHumidity,
-		Temperature:          group.Temperature,
-		CO2:                  group.CO2,
-		COV:                  group.COV,
-		Hygrometry:           group.Hygrometry,
-		Leds:                 group.Runtime.Leds,
-		Blinds:               group.Runtime.Blinds,
-		Sensors:              group.Runtime.Sensors,
-		Hvacs:                group.Runtime.Hvacs,
-		Nanosenses:           group.Runtime.Nanosenses,
-		RuleBrightness:       group.Runtime.RuleBrightness,
-		RulePresence:         group.Runtime.RulePresence,
-		Watchdog:             watchdog,
-		FriendlyName:         name,
-		FirstDayOffset:       group.Runtime.FirstDayOffset,
-		FirstDay:             group.Runtime.FirstDay,
-		SetpointLedsFirstDay: group.FirstDaySetpoint,
+		Group:                   group.Runtime.Group,
+		Auto:                    auto,
+		TimeToAuto:              group.TimeToAuto,
+		SensorRule:              sensorRule,
+		Error:                   group.Error,
+		Presence:                group.Presence,
+		WindowsOpened:           group.Opened,
+		TimeToLeave:             group.PresenceTimeout,
+		CorrectionInterval:      correctionInterval,
+		SetpointLeds:            group.Setpoint,
+		SlopeStartAuto:          slopeStartAuto,
+		SlopeStartManual:        slopeStartManual,
+		SlopeStopAuto:           slopeStopAuto,
+		SlopeStopManual:         slopeStopManual,
+		Brightness:              group.Brightness,
+		CeilingTemperature:      group.CeilingTemperature,
+		CeilingHumidity:         group.CeilingHumidity,
+		Temperature:             group.Temperature,
+		CO2:                     group.CO2,
+		COV:                     group.COV,
+		Hygrometry:              group.Hygrometry,
+		Leds:                    group.Runtime.Leds,
+		Blinds:                  group.Runtime.Blinds,
+		Sensors:                 group.Runtime.Sensors,
+		Hvacs:                   group.Runtime.Hvacs,
+		Nanosenses:              group.Runtime.Nanosenses,
+		RuleBrightness:          group.Runtime.RuleBrightness,
+		RulePresence:            group.Runtime.RulePresence,
+		Watchdog:                watchdog,
+		FriendlyName:            name,
+		FirstDayOffset:          group.Runtime.FirstDayOffset,
+		FirstDay:                group.Runtime.FirstDay,
+		SetpointLedsFirstDay:    group.FirstDaySetpoint,
+		SetpointTempOffset:      tempShift,
+		SetpointOccupiedCool1:   group.OccupCool,
+		SetpointOccupiedHeat1:   group.OccupHeat,
+		SetpointUnoccupiedHeat1: group.UnoccupHeat,
+		SetpointUnoccupiedCool1: group.UnoccupCool,
+		SetpointStandbyHeat1:    group.StandbyHeat,
+		SetpointStandbyCool1:    group.StandbyCool,
+		HvacsEffectMode:         group.HvacsEffectMode,
+		HvacsTargetMode:         targetMode,
 	}
 
 	s.groupStatus.Set(strconv.Itoa(status.Group), status)
@@ -324,9 +407,18 @@ func (s *Service) groupRun(group *Group) error {
 					case EventBlind:
 						rlog.Info("Received blind event ", group)
 						s.setpointBlind(group, group.SetpointBlinds, group.SetpointSlatBlinds)
+
 					case EventHvac:
 						rlog.Info("Received HVAC event ", group)
 						s.setpointHvac(group, group.ShiftTemp)
+
+					case EventHvacConfig:
+						rlog.Info("Received HVAC Config event ", group)
+						s.setpointHvacConfig(group)
+
+					case EventResetDrivers:
+						rlog.Info("Received Reset EIP drivers ", group)
+						s.resetEipDrivers(group)
 					}
 				}
 			case <-ticker.C:
@@ -357,6 +449,7 @@ func (s *Service) groupRun(group *Group) error {
 				s.computeSensorTemperatureAndHumidity(group)
 				s.computeBrightness(group)
 				s.computeNanosenseInfo(group)
+				s.computeHvacInfo(group)
 				interval := 10
 				if group.Runtime.CorrectionInterval != nil {
 					interval = *group.Runtime.CorrectionInterval
@@ -707,7 +800,7 @@ func (s *Service) computeNanosenseInfo(group *Group) {
 	for mac, d := range group.Nanosenses.Items() {
 		nano, _ := ToNanoEvent(d)
 
-		_, ok := group.SensorsIssue.Get(nano.Mac)
+		_, ok := group.NanosensesIssue.Get(nano.Mac)
 		if ok {
 			// do not take it to account a nano with an issue
 			continue
@@ -747,6 +840,128 @@ func (s *Service) computeNanosenseInfo(group *Group) {
 			}
 			if group.COV > nano.COV {
 				group.COV = nano.COV
+			}
+		}
+	}
+}
+
+func (s *Service) computeHvacInfo(group *Group) {
+	//compute hvac values
+	refMac := ""
+	occMan := 0
+	occupCool := 0
+	occupHeat := 0
+	unoccupCool := 0
+	unoccupHeat := 0
+	stdbyCool := 0
+	stdbyHeat := 0
+
+	for mac, driver := range group.Hvacs.Items() {
+		hvac, _ := ToHvacEvent(driver)
+		_, ok := group.HvacsIssue.Get(mac)
+		if ok {
+			// do not take it to account a nanosense with an issue
+			continue
+		}
+		occMan = hvac.OccManCmd1
+		occupCool = hvac.SetpointCoolOccupied
+		occupHeat = hvac.SetpointHeatOccupied
+		unoccupCool = hvac.SetpointCoolInoccupied
+		unoccupHeat = hvac.SetpointHeatInoccupied
+		stdbyCool = hvac.SetpointCoolStandby
+		stdbyHeat = hvac.SetpointHeatStandby
+		break
+	}
+	if refMac == "" {
+		//No sensors in this group
+		return
+	}
+	nbValids := group.Hvacs.Count() - group.HvacsIssue.Count()
+	if nbValids <= 0 {
+		//no valid sensor found
+		return
+	}
+
+	group.HvacsEffectMode = occMan
+
+	group.OccupCool = occupCool / nbValids
+	group.OccupHeat = occupHeat / nbValids
+	group.UnoccupHeat = unoccupHeat / nbValids
+	group.UnoccupCool = unoccupCool / nbValids
+	group.StandbyCool = stdbyCool / nbValids
+	group.StandbyHeat = stdbyHeat / nbValids
+
+	sensorRule := gm.SensorAverage
+	if group.Runtime.SensorRule != nil {
+		sensorRule = *group.Runtime.SensorRule
+	}
+	switch sensorRule {
+	case gm.SensorMin:
+		group.OccupCool = occupCool
+		group.OccupHeat = occupHeat
+		group.UnoccupHeat = unoccupHeat
+		group.UnoccupCool = unoccupCool
+		group.StandbyCool = stdbyCool
+		group.StandbyHeat = stdbyHeat
+	}
+
+	for mac, d := range group.Hvacs.Items() {
+		hvac, _ := ToHvacEvent(d)
+
+		_, ok := group.HvacsIssue.Get(hvac.Mac)
+		if ok {
+			// do not take it to account a nano with an issue
+			continue
+		}
+
+		switch sensorRule {
+		case gm.SensorAverage:
+			if mac == refMac {
+				continue
+			}
+			group.OccupCool = occupCool / nbValids
+			group.OccupHeat = occupHeat / nbValids
+			group.UnoccupHeat = unoccupHeat / nbValids
+			group.UnoccupCool = unoccupCool / nbValids
+			group.StandbyCool = stdbyCool / nbValids
+			group.StandbyHeat = stdbyHeat / nbValids
+		case gm.SensorMax:
+			if group.OccupCool < hvac.SetpointCoolOccupied {
+				group.OccupCool = hvac.SetpointCoolOccupied
+			}
+			if group.OccupHeat < hvac.SetpointHeatOccupied {
+				group.OccupHeat = hvac.SetpointHeatOccupied
+			}
+			if group.UnoccupCool < hvac.SetpointCoolInoccupied {
+				group.UnoccupCool = hvac.SetpointCoolInoccupied
+			}
+			if group.UnoccupHeat < hvac.SetpointHeatInoccupied {
+				group.UnoccupHeat = hvac.SetpointHeatInoccupied
+			}
+			if group.StandbyCool < hvac.SetpointCoolStandby {
+				group.StandbyCool = hvac.SetpointCoolStandby
+			}
+			if group.StandbyHeat < hvac.SetpointHeatStandby {
+				group.StandbyHeat = hvac.SetpointHeatStandby
+			}
+		case gm.SensorMin:
+			if group.OccupCool > hvac.SetpointCoolOccupied {
+				group.OccupCool = hvac.SetpointCoolOccupied
+			}
+			if group.OccupHeat > hvac.SetpointHeatOccupied {
+				group.OccupHeat = hvac.SetpointHeatOccupied
+			}
+			if group.UnoccupCool > hvac.SetpointCoolInoccupied {
+				group.UnoccupCool = hvac.SetpointCoolInoccupied
+			}
+			if group.UnoccupHeat > hvac.SetpointHeatInoccupied {
+				group.UnoccupHeat = hvac.SetpointHeatInoccupied
+			}
+			if group.StandbyCool > hvac.SetpointCoolStandby {
+				group.StandbyCool = hvac.SetpointCoolStandby
+			}
+			if group.StandbyHeat > hvac.SetpointHeatStandby {
+				group.StandbyHeat = hvac.SetpointHeatStandby
 			}
 		}
 	}
@@ -811,6 +1026,53 @@ func (s *Service) setpointHvac(group *Group, shift *int) {
 	}
 }
 
+func (s *Service) setpointHvacConfig(group *Group) {
+	for _, driver := range group.Runtime.Hvacs {
+		cfg := dhvac.HvacConf{
+			Mac: driver,
+		}
+		if group.Runtime.SetpointOccupiedCool1 != nil {
+			cfg.SetpointCoolOccupied = group.Runtime.SetpointOccupiedCool1
+		}
+		if group.Runtime.SetpointOccupiedHeat1 != nil {
+			cfg.SetpointHeatOccupied = group.Runtime.SetpointOccupiedHeat1
+		}
+		if group.Runtime.SetpointUnoccupiedCool1 != nil {
+			cfg.SetpointCoolInoccupied = group.Runtime.SetpointUnoccupiedCool1
+		}
+		if group.Runtime.SetpointUnoccupiedHeat1 != nil {
+			cfg.SetpointHeatInoccupied = group.Runtime.SetpointUnoccupiedHeat1
+		}
+		if group.Runtime.SetpointStandbyCool1 != nil {
+			cfg.SetpointCoolStandby = group.Runtime.SetpointStandbyCool1
+		}
+		if group.Runtime.SetpointStandbyHeat1 != nil {
+			cfg.SetpointHeatStandby = group.Runtime.SetpointStandbyHeat1
+		}
+		if group.Runtime.HvacsHeatCool != nil {
+			cfg.HeatCool = group.Runtime.HvacsHeatCool
+		}
+		if group.Runtime.HvacsTargetMode != nil {
+			cfg.TargetMode = group.Runtime.HvacsTargetMode
+		}
+		s.updateHvacConfig(cfg)
+	}
+}
+
+func (s *Service) resetEipDrivers(group *Group) {
+	for _, driver := range group.Runtime.Blinds {
+		s.sendBlindReset(driver)
+	}
+
+	for _, driver := range group.Runtime.Leds {
+		s.sendLedReset(driver)
+	}
+
+	for _, driver := range group.Runtime.Sensors {
+		s.sendSensorReset(driver)
+	}
+}
+
 func (s *Service) sendHvacValues(group *Group) {
 	// send hygro/Co2/COV/temp from nanosenses
 	for _, driver := range group.Runtime.Hvacs {
@@ -833,6 +1095,8 @@ func (s *Service) createGroup(runtime gm.GroupConfig) {
 		BlindsIssue:     cmap.New(),
 		Nanosenses:      cmap.New(),
 		NanosensesIssue: cmap.New(),
+		Hvacs:           cmap.New(),
+		HvacsIssue:      cmap.New(),
 		FirstDay:        cmap.New(),
 	}
 	for _, sensor := range runtime.Sensors {
@@ -841,6 +1105,10 @@ func (s *Service) createGroup(runtime gm.GroupConfig) {
 
 	for _, blind := range runtime.Blinds {
 		group.Blinds.Set(blind, BlindEvent{})
+	}
+
+	for _, hvac := range runtime.Hvacs {
+		group.Hvacs.Set(hvac, HvacEvent{})
 	}
 
 	for _, nano := range runtime.Nanosenses {
@@ -861,6 +1129,10 @@ func (s *Service) createGroup(runtime gm.GroupConfig) {
 	for _, blind := range runtime.Blinds {
 		//to be sure of the state after a creation or a restart
 		group.BlindsIssue.Set(blind, true)
+	}
+	for _, hvac := range runtime.Hvacs {
+		//to be sure of the state after a creation or a restart
+		group.HvacsIssue.Set(hvac, true)
 	}
 	s.groups[runtime.Group] = group
 	s.groupRun(&group)
@@ -948,6 +1220,68 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 		}()
 	}
 
+	if new.SetpointOccupiedCool1 != nil {
+		go func() {
+			gr.OccupCool = *new.SetpointOccupiedCool1
+			event := make(map[string]*gm.GroupConfig)
+			event[EventHvacConfig] = new
+			gr.Event <- event
+		}()
+	}
+
+	if new.SetpointOccupiedHeat1 != nil {
+		go func() {
+			gr.OccupHeat = *new.SetpointOccupiedHeat1
+			event := make(map[string]*gm.GroupConfig)
+			event[EventHvacConfig] = new
+			gr.Event <- event
+		}()
+	}
+
+	if new.SetpointUnoccupiedHeat1 != nil {
+		go func() {
+			gr.UnoccupHeat = *new.SetpointUnoccupiedHeat1
+			event := make(map[string]*gm.GroupConfig)
+			event[EventHvacConfig] = new
+			gr.Event <- event
+		}()
+	}
+
+	if new.SetpointUnoccupiedCool1 != nil {
+		go func() {
+			gr.UnoccupCool = *new.SetpointUnoccupiedCool1
+			event := make(map[string]*gm.GroupConfig)
+			event[EventHvacConfig] = new
+			gr.Event <- event
+		}()
+	}
+
+	if new.SetpointStandbyCool1 != nil {
+		go func() {
+			gr.StandbyCool = *new.SetpointStandbyCool1
+			event := make(map[string]*gm.GroupConfig)
+			event[EventHvacConfig] = new
+			gr.Event <- event
+		}()
+	}
+
+	if new.SetpointStandbyHeat1 != nil {
+		go func() {
+			gr.StandbyHeat = *new.SetpointStandbyHeat1
+			event := make(map[string]*gm.GroupConfig)
+			event[EventHvacConfig] = new
+			gr.Event <- event
+		}()
+	}
+
+	if new.HvacsTargetMode != nil {
+		go func() {
+			event := make(map[string]*gm.GroupConfig)
+			event[EventHvacConfig] = new
+			gr.Event <- event
+		}()
+	}
+
 	if new.CorrectionInterval != nil {
 		gr.Runtime.CorrectionInterval = new.CorrectionInterval
 		if gr.Counter > *gr.Runtime.CorrectionInterval {
@@ -1028,8 +1362,29 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 			}
 		}
 	}
+
 	if new.Hvacs != nil {
 		gr.Runtime.Hvacs = new.Hvacs
+		seen := make(map[string]bool)
+		for _, label := range new.Hvacs {
+			_, ok := gr.Hvacs.Get(label)
+			if !ok {
+				gr.Hvacs.Set(label, HvacEvent{})
+			}
+			seen[label] = true
+			// do not take in to consideration until we received valid information from the Hvacs
+			gr.HvacsIssue.Set(label, true)
+		}
+		for label := range gr.Hvacs.Items() {
+			_, ok := seen[label]
+			if !ok {
+				gr.Hvacs.Remove(label)
+				_, ok := gr.HvacsIssue.Get(label)
+				if ok {
+					gr.HvacsIssue.Remove(label)
+				}
+			}
+		}
 	}
 	if new.Sensors != nil {
 		gr.Runtime.Sensors = new.Sensors
@@ -1075,6 +1430,13 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 		if gr.TimeToAuto > *gr.Runtime.Watchdog {
 			//force decrease counter
 			gr.TimeToAuto = *gr.Runtime.Watchdog
+		}
+	}
+	if new.EipDriversReset != nil {
+		if *new.EipDriversReset == true {
+			event := make(map[string]*gm.GroupConfig)
+			event[EventResetDrivers] = new
+			gr.Event <- event
 		}
 	}
 }

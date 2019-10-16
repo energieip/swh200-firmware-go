@@ -141,6 +141,15 @@ func (s *Service) updateLedConfig(config dl.LedConf) {
 	}
 }
 
+func (s *Service) sendLedReset(mac string) {
+	configured := false
+	driver := dl.LedConf{
+		Mac:          mac,
+		IsConfigured: &configured,
+	}
+	s.sendLedUpdate(driver)
+}
+
 func (s *Service) onLedHello(client network.Client, msg network.Message) {
 	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
 	var led dl.Led

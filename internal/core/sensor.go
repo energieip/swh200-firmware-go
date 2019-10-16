@@ -132,6 +132,15 @@ func (s *Service) removeSensor(mac string) {
 	}
 }
 
+func (s *Service) sendSensorReset(mac string) {
+	configured := false
+	driver := ds.SensorConf{
+		Mac:          mac,
+		IsConfigured: &configured,
+	}
+	s.sendSensorUpdate(driver)
+}
+
 func (s *Service) onSensorHello(client network.Client, msg network.Message) {
 	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
 	var sensor ds.Sensor

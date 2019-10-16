@@ -75,6 +75,15 @@ func (s *Service) sendBlindUpdate(driver dblind.BlindConf) {
 	s.localSendCommand(url, dump)
 }
 
+func (s *Service) sendBlindReset(mac string) {
+	configured := false
+	driver := dblind.BlindConf{
+		Mac:          mac,
+		IsConfigured: &configured,
+	}
+	s.sendBlindUpdate(driver)
+}
+
 func (s *Service) sendBlindGroupSetpoint(mac string, blind *int, slat *int) {
 	_, ok := s.blinds.Get(mac)
 	if !ok {

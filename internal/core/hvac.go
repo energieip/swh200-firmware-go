@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 	"time"
 
@@ -11,6 +12,62 @@ import (
 	"github.com/energieip/swh200-firmware-go/internal/database"
 	"github.com/romana/rlog"
 )
+
+type HvacEvent struct {
+	Mac                    string `json:"mac"`
+	SetpointCoolOccupied   int    `json:"setpointCoolOccupied"`   // 1/10°C
+	SetpointHeatOccupied   int    `json:"setpointHeatOccupied"`   // 1/10°C
+	SetpointCoolInoccupied int    `json:"setpointCoolInoccupied"` // 1/10°C
+	SetpointHeatInoccupied int    `json:"setpointHeatInoccupied"` // 1/10°C
+	SetpointCoolStandby    int    `json:"setpointCoolStandby"`    // 1/10°C
+	SetpointHeatStandby    int    `json:"setpointHeatStandby"`    // 1/10°C
+	TargetMode             int    `json:"targetMode"`             //TargetMode
+	OccManCmd1             int    `json:"occManCmd1"`
+}
+
+type HvacErrorEvent struct {
+	Mac string `json:"mac"`
+}
+
+//ToJSON dump struct in json
+func (hvac HvacErrorEvent) ToJSON() (string, error) {
+	inrec, err := json.Marshal(hvac)
+	if err != nil {
+		return "", err
+	}
+	return string(inrec), err
+}
+
+//ToHvacErrorEvent convert interface to Hvac object
+func ToHvacErrorEvent(val interface{}) (*HvacErrorEvent, error) {
+	var driver HvacErrorEvent
+	inrec, err := json.Marshal(val)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(inrec, &driver)
+	return &driver, err
+}
+
+//ToJSON dump struct in json
+func (hvac HvacEvent) ToJSON() (string, error) {
+	inrec, err := json.Marshal(hvac)
+	if err != nil {
+		return "", err
+	}
+	return string(inrec), err
+}
+
+//ToHvacEvent convert interface to Hvac object
+func ToHvacEvent(val interface{}) (*HvacEvent, error) {
+	var driver HvacEvent
+	inrec, err := json.Marshal(val)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(inrec, &driver)
+	return &driver, err
+}
 
 func (s *Service) sendHvacSetup(driver dhvac.HvacSetup) {
 	url := "/write/hvac/" + driver.Mac + "/" + pconst.UrlSetup
@@ -150,6 +207,35 @@ func (s *Service) onHvacStatus(client network.Client, msg network.Message) {
 	driver.Mac = strings.ToUpper(driver.Mac)
 	s.driversSeen.Set(driver.Mac, time.Now().UTC())
 	driver.SwitchMac = s.mac
-
+	if driver.Error == 0 {
+		url := "/read/group/" + strconv.Itoa(driver.Group) + "/events/hvac"
+		evt := HvacEvent{
+			Mac:                    driver.Mac,
+			SetpointCoolInoccupied: driver.SetpointUnoccupiedCool1,
+			SetpointCoolOccupied:   driver.SetpointOccupiedCool1,
+			SetpointCoolStandby:    driver.SetpointStandbyCool1,
+			SetpointHeatInoccupied: driver.SetpointUnoccupiedHeat1,
+			SetpointHeatOccupied:   driver.SetpointOccupiedHeat1,
+			SetpointHeatStandby:    driver.SetpointStandbyHeat1,
+			TargetMode:             driver.TargetMode,
+			OccManCmd1:             driver.OccManCmd1,
+		}
+		dump, _ := evt.ToJSON()
+		s.clusterSendCommand(url, dump)
+		s.localSendCommand(url, dump)
+	} else {
+		s.sendInvalidHvacStatus(driver)
+	}
 	s.updateHvacStatus(driver)
+}
+
+func (s *Service) sendInvalidHvacStatus(hvac dhvac.Hvac) {
+	url := "/read/group/" + strconv.Itoa(hvac.Group) + "/error/hvac"
+	evt := HvacErrorEvent{
+		Mac: hvac.Mac,
+	}
+	dump, _ := evt.ToJSON()
+
+	s.clusterSendCommand(url, dump)
+	s.localSendCommand(url, dump)
 }
