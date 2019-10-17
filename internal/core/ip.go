@@ -74,7 +74,7 @@ func (s *Service) updateIPConfig(ip string, elt sd.SwitchDefinition) {
 		return
 	}
 
-	dump := "interface eth0\nstatic ip_address=" + ip + "/24\nstatic routers=192.168.0.2\nstatic domain_name_servers=192.168.0.2\n"
+	dump := "interface eth0\nstatic ip_address=" + ip + "/16\nstatic routers=192.168.0.2\nstatic domain_name_servers=192.168.0.2\n"
 
 	if _, err = f.WriteString(dump); err != nil {
 		f.Close()
