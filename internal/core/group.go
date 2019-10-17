@@ -1453,8 +1453,37 @@ func (s *Service) onGroupCommand(client network.Client, msg network.Message) {
 	}
 	grID := cmd.Group
 	// Note send the same command in the cluster
-	topic := "/write/group/" + strconv.Itoa(grID) + "/commands"
-	s.localSendCommand(topic, payloadStr)
+	topic := "/write/cluster/group/" + strconv.Itoa(grID) + "/commands"
+	s.clusterSendCommand(topic, payloadStr)
+	if _, ok := s.groups[grID]; !ok {
+		rlog.Info("Group " + strconv.Itoa(grID) + " not running on this switch skip it")
+		return
+	}
+	group := dgroup.GroupConfig{
+		Group:              cmd.Group,
+		SetpointLeds:       cmd.Leds,
+		SetpointSlatBlinds: cmd.Slats,
+		SetpointBlinds:     cmd.Blinds,
+		SetpointTempOffset: cmd.TempShift,
+	}
+	if cmd.Leds != nil {
+		auto := false
+		group.Auto = &auto
+	}
+	s.reloadGroupConfig(grID, group)
+}
+
+func (s *Service) onClusterGroupCommand(client network.Client, msg network.Message) {
+	payload := msg.Payload()
+	payloadStr := string(payload)
+	rlog.Info("Received BLE cmd from cluster" + msg.Topic() + " : " + payloadStr)
+	var cmd SwitchCmd
+	err := json.Unmarshal(payload, &cmd)
+	if err != nil {
+		rlog.Error("Error during parsing", err.Error())
+		return
+	}
+	grID := cmd.Group
 	if _, ok := s.groups[grID]; !ok {
 		rlog.Info("Group " + strconv.Itoa(grID) + " not running on this switch skip it")
 		return

@@ -48,6 +48,7 @@ func (s *Service) localConnection() error {
 	cbkLocal["/read/group/+/events/nano"] = s.onGroupNanoEvent
 	cbkLocal["/read/group/+/error/nano"] = s.onGroupNanoErrorEvent
 	cbkLocal["/write/group/+/commands"] = s.onGroupCommand
+	cbkLocal["/write/cluster/group/+/commands"] = s.onClusterGroupCommand
 
 	confLocal := genericNetwork.NetworkConfig{
 		IP:        s.conf.LocalBroker.IP,
