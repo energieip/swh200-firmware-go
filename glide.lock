@@ -1,5 +1,5 @@
 hash: d411425b4f9db07589085d22323989d1ba481bfb0dd3cddbcc5288ab094b4b65
-updated: 2019-10-15T16:50:39.813697414+02:00
+updated: 2019-10-18T15:49:19.681743122+02:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 2146c93394225c3732078705043ce9f26584d334
@@ -8,7 +8,7 @@ imports:
   subpackages:
   - packets
 - name: github.com/energieip/common-components-go
-  version: 7ba2fcb6670983cfa49ea9158926498bf61a2be8
+  version: b7720edae8640cc5072e0fd2fcc7d575252834e2
   subpackages:
   - pkg/database
   - pkg/dblind
@@ -29,7 +29,7 @@ imports:
   subpackages:
   - proto
 - name: github.com/gorilla/mux
-  version: 884b5ffcbd3a11b730f0b75f5c86ac408753c34d
+  version: ff4e71f144166b1dfe3017a146f8ed32a82e688b
 - name: github.com/gorilla/websocket
   version: c3e18be99d19e6b3e8f1559eea2c161a665c4b6b
 - name: github.com/hailocab/go-hostpool
@@ -58,7 +58,7 @@ imports:
   - internal/socks
   - proxy
 - name: golang.org/x/sys
-  version: b09406accb4736d857a32bf9444cd7edae2ffa79
+  version: 727590c5006e77ca5247972f47e877f4929fc985
   subpackages:
   - unix
 - name: gopkg.in/fatih/pool.v2

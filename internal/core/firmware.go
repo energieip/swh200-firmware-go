@@ -546,28 +546,28 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 		if ok {
 			i, err := strconv.Atoi(covAPI)
 			if err == nil {
-				nanoDev.COV = nano.ModbusOffset + i + modbusOffset
+				nanoDev.COV = modbusOffset + ((nano.ModbusID - 1) * len(nano.API)) + i
 			}
 		}
 		co2API, ok := nano.API["CO2"]
 		if ok {
 			i, err := strconv.Atoi(co2API)
 			if err == nil {
-				nanoDev.CO2 = nano.ModbusOffset + i + modbusOffset
+				nanoDev.CO2 = modbusOffset + ((nano.ModbusID - 1) * len(nano.API)) + i
 			}
 		}
 		HygoAPI, ok := nano.API["Hygro"]
 		if ok {
 			i, err := strconv.Atoi(HygoAPI)
 			if err == nil {
-				nanoDev.Hygrometry = nano.ModbusOffset + i + modbusOffset
+				nanoDev.Hygrometry = modbusOffset + ((nano.ModbusID - 1) * len(nano.API)) + i
 			}
 		}
 		tempAPI, ok := nano.API["Temp"]
 		if ok {
 			i, err := strconv.Atoi(tempAPI)
 			if err == nil {
-				nanoDev.Temperature = nano.ModbusOffset + i + modbusOffset
+				nanoDev.Temperature = modbusOffset + ((nano.ModbusID - 1) * len(nano.API)) + i
 			}
 		}
 		var nanos []dnanosense.NanosenseDef
