@@ -74,8 +74,6 @@ func (s *Service) sendInvalidNanoStatus(driver dn.Nanosense) {
 		Mac: driver.Mac,
 	}
 	dump, _ := evt.ToJSON()
-
-	s.clusterSendCommand(url, dump)
 	s.localSendCommand(url, dump)
 }
 
@@ -104,7 +102,6 @@ func (s *Service) onNanoStatus(client network.Client, msg network.Message) {
 			COV:         driver.COV,
 		}
 		dump, _ := evt.ToJSON()
-		s.clusterSendCommand(url, dump)
 		s.localSendCommand(url, dump)
 	} else {
 		s.sendInvalidNanoStatus(driver)
