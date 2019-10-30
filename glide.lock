@@ -1,14 +1,14 @@
 hash: d411425b4f9db07589085d22323989d1ba481bfb0dd3cddbcc5288ab094b4b65
-updated: 2019-10-18T15:49:19.681743122+02:00
+updated: 2019-10-30T09:43:16.015572343+01:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 2146c93394225c3732078705043ce9f26584d334
 - name: github.com/eclipse/paho.mqtt.golang
-  version: 2e9e43b5d02b38840f73bf795ddc8a266a10bf53
+  version: 825e8b38f891bed20340ddb2460dd5c541ab0542
   subpackages:
   - packets
 - name: github.com/energieip/common-components-go
-  version: b7720edae8640cc5072e0fd2fcc7d575252834e2
+  version: 67077304a539eec8114265576a816e4779eeb3f9
   subpackages:
   - pkg/database
   - pkg/dblind
@@ -25,11 +25,11 @@ imports:
   - pkg/service
   - pkg/tools
 - name: github.com/golang/protobuf
-  version: 1680a479a2cfb3fa22b972af7e36d0a0fde47bf8
+  version: ed6926b37a637426117ccab59282c3839528a700
   subpackages:
   - proto
 - name: github.com/gorilla/mux
-  version: ff4e71f144166b1dfe3017a146f8ed32a82e688b
+  version: f395758b854c4efa789b8c1e9b73479704c548cb
 - name: github.com/gorilla/websocket
   version: c3e18be99d19e6b3e8f1559eea2c161a665c4b6b
 - name: github.com/hailocab/go-hostpool
@@ -46,19 +46,19 @@ imports:
 - name: github.com/romana/rlog
   version: f018bc92e7d71f27c04e04cbf008860416c21d01
 - name: github.com/sirupsen/logrus
-  version: fb62dbe2f2a2c88b150fa1668a773505a7920a3d
+  version: 67a7fdcf741f4d5cee82cb9800994ccfd4393ad0
 - name: golang.org/x/crypto
-  version: 87dc89f01550277dc22b74ffcf4cd89fa2f40f4c
+  version: 8986dd9e96cf0a6f74da406c005ba3df38527c04
   subpackages:
   - pbkdf2
 - name: golang.org/x/net
-  version: da9a3fd4c5820e74b24a6cb7fb438dc9b0dd377c
+  version: fe3aa8a4527195a6057b3fad46619d7d090e99b5
   subpackages:
   - context
   - internal/socks
   - proxy
 - name: golang.org/x/sys
-  version: 727590c5006e77ca5247972f47e877f4929fc985
+  version: f43be2a4598cf3a47be9f94f0c28197ed9eae611
   subpackages:
   - unix
 - name: gopkg.in/fatih/pool.v2
