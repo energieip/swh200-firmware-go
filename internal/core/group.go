@@ -863,6 +863,7 @@ func (s *Service) computeHvacInfo(group *Group) {
 			// do not take it to account a nanosense with an issue
 			continue
 		}
+		refMac = mac
 		occMan = hvac.OccManCmd1
 		occupCool = hvac.SetpointCoolOccupied
 		occupHeat = hvac.SetpointHeatOccupied
