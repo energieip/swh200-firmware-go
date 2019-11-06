@@ -26,7 +26,7 @@ func (s *Service) activateGPIOs() {
 		rlog.Error("gpio write 7 1 update finished with " + err.Error())
 		return
 	}
-	time.Sleep(20 * time.Second)
+	time.Sleep(40 * time.Second)
 
 	rlog.Info("Activate PSE 2 Switch")
 	cmd = exec.Command("gpio", "write", "1", "1")
