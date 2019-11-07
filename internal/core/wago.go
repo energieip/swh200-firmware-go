@@ -33,6 +33,9 @@ func (s *Service) removeWago(mac string) {
 }
 
 func (s *Service) sendWagoSetup(driver dwago.WagoDef) {
+	if driver.Mac == "" {
+		return
+	}
 	url := "/write/wago/" + driver.Mac + "/" + pconst.UrlSetup
 	dump, _ := driver.ToJSON()
 	s.localSendCommand(url, dump)
@@ -59,6 +62,9 @@ func (s *Service) prepareWagoSetup(driver dwago.WagoDef) {
 }
 
 func (s *Service) sendWagoUpdate(driver dwago.WagoDef) {
+	if driver.Mac == "" {
+		return
+	}
 	url := "/write/wago/" + driver.Mac + "/" + pconst.UrlSetting
 	dump, _ := driver.ToJSON()
 	s.localSendCommand(url, dump)

@@ -497,7 +497,7 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 	for _, wago := range switchConfig.WagosSetup {
 		wagoDev := dwago.WagoDef{}
 		wagoDev.Cluster = &wago.Cluster
-		freq := 1000
+		freq := 10000
 		if wago.DumpFrequency != nil {
 			freq = *wago.DumpFrequency
 		}
@@ -737,6 +737,8 @@ func (s *Service) Run() error {
 							s.sensors = cmap.New()
 							s.blinds = cmap.New()
 							s.hvacs = cmap.New()
+							s.nanos = cmap.New()
+							s.wagos = cmap.New()
 							s.clusterID = 0
 							s.groups = make(map[int]Group)
 							for mac := range s.cluster {
