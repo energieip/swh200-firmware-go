@@ -1,5 +1,5 @@
 Switch Firmware: Service Management for configuration and data
-==========================================================
+==============================================================
 
 Switch core service responsible for:
 * Getting configuration from the GTB server
@@ -48,7 +48,7 @@ To compile it:
 ```
     make bin/energieip-swh200-firmware-armhf
 ```
-* To create debian archive for x86:
+* To create debian archive for ARM architecture:
 ```
     make deb-armhf
 ```
