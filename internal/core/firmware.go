@@ -160,10 +160,12 @@ func (s *Service) Initialize(confFile string) error {
 
 	wagos := database.GetWagosConfig(s.db)
 	for _, wago := range wagos {
-		dump, _ := wago.ToJSON()
-		err := s.localSendCommand("/write/wago/"+wago.Mac+"/"+pconst.UrlSetup, dump)
-		if err != nil {
-			rlog.Errorf("Could not send hello to the server %v status %v", s.mac, err.Error())
+		if wago.Mac != "" {
+			dump, _ := wago.ToJSON()
+			err := s.localSendCommand("/write/wago/"+wago.Mac+"/"+pconst.UrlSetup, dump)
+			if err != nil {
+				rlog.Errorf("Could not send setup to the modbus2mqtt service %v status %v", wago.Mac, err.Error())
+			}
 		}
 	}
 
@@ -428,6 +430,22 @@ func (s *Service) sendDump() {
 		}
 	}
 	status.Nanos = dumpNanos
+
+	go func() {
+		wagos := database.GetWagosConfig(s.db)
+		for _, wago := range wagos {
+			if wago.Mac != "" {
+				_, ok := s.wagos.Get(wago.Mac)
+				if !ok {
+					dump, _ := wago.ToJSON()
+					err := s.localSendCommand("/write/wago/"+wago.Mac+"/"+pconst.UrlSetup, dump)
+					if err != nil {
+						rlog.Errorf("Could not send setup to the modbus2mqtt service %v status %v", wago.Mac, err.Error())
+					}
+				}
+			}
+		}
+	}()
 
 	for _, elt := range s.groupStatus.Items() {
 		gr, err := dgroup.ToGroupStatus(elt)
