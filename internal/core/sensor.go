@@ -183,19 +183,19 @@ func (s *Service) onSensorStatus(client network.Client, msg network.Message) {
 	if cfg != nil {
 		sensor.Label = cfg.Label
 		// apply brightness correction Factor
-		factor := 1
+		factor := float32(1)
 		if cfg.BrightnessCorrectionFactor != nil {
 			factor = *cfg.BrightnessCorrectionFactor
 		}
-		if factor != 0 {
-			sensor.Brightness = sensor.BrightnessRaw * factor
+		if factor != float32(0) {
+			sensor.Brightness = int(float32(sensor.BrightnessRaw) * factor)
 		}
 		// apply brightness correction Offset
-		offset := 0
+		offset := float32(0)
 		if cfg.BrightnessCorrectionOffset != nil {
 			offset = *cfg.BrightnessCorrectionOffset
 		}
-		sensor.Brightness = sensor.Brightness + offset
+		sensor.Brightness = int(float32(sensor.Brightness) + offset)
 	}
 
 	err = s.updateSensorStatus(sensor)
