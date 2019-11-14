@@ -911,7 +911,7 @@ func (s *Service) computeHvacInfo(group *Group) {
 
 		_, ok := group.HvacsIssue.Get(hvac.Mac)
 		if ok {
-			// do not take it to account a nano with an issue
+			// do not take it to account a hvac with an issue
 			continue
 		}
 
@@ -920,12 +920,12 @@ func (s *Service) computeHvacInfo(group *Group) {
 			if mac == refMac {
 				continue
 			}
-			group.OccupCool = occupCool / nbValids
-			group.OccupHeat = occupHeat / nbValids
-			group.UnoccupHeat = unoccupHeat / nbValids
-			group.UnoccupCool = unoccupCool / nbValids
-			group.StandbyCool = stdbyCool / nbValids
-			group.StandbyHeat = stdbyHeat / nbValids
+			group.OccupCool += hvac.SetpointCoolOccupied / nbValids
+			group.OccupHeat += hvac.SetpointHeatOccupied / nbValids
+			group.UnoccupHeat += hvac.SetpointHeatInoccupied / nbValids
+			group.UnoccupCool += hvac.SetpointCoolInoccupied / nbValids
+			group.StandbyCool += hvac.SetpointCoolStandby / nbValids
+			group.StandbyHeat += hvac.SetpointHeatStandby / nbValids
 		case gm.SensorMax:
 			if group.OccupCool < hvac.SetpointCoolOccupied {
 				group.OccupCool = hvac.SetpointCoolOccupied
