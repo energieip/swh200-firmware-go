@@ -40,7 +40,7 @@ const (
 	UrlStatus = "status/dump"
 	UrlHello  = "setup/hello"
 
-	DefaultTimerDump = 1000
+	DefaultTimerDump = 10000
 )
 
 //Service content
@@ -729,7 +729,7 @@ func (s *Service) systemUpdate(switchConfig sd.SwitchConfig) {
 func (s *Service) Run() error {
 	rand.Seed(time.Now().UTC().UnixNano())
 	delay := rand.Int63n(50)
-	time.Sleep(time.Duration(delay) * time.Millisecond)
+	time.Sleep(time.Duration(delay) * time.Second)
 	s.sendHello()
 	go s.cronDump()
 	go s.cronLedMode()
