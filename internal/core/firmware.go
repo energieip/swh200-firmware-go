@@ -175,7 +175,25 @@ func (s *Service) Initialize(confFile string) error {
 	rlog.Info("SwitchCore service started")
 	go s.activateGPIOs()
 	go s.baesManagement()
+	go s.cronCheckNetwork()
 	return nil
+}
+
+func (s *Service) cronCheckNetwork() {
+	timerDump := time.NewTicker(5 * time.Minute)
+	for {
+		select {
+		case <-timerDump.C:
+			count := s.leds.Count() + s.sensors.Count() + s.blinds.Count() + s.hvacs.Count()
+			if count == 0 {
+				rlog.Info("No driver seen: reboot")
+				cmd := exec.Command("reboot")
+				cmd.Run()
+			}
+			timerDump.Stop()
+			timerDump = time.NewTicker(5 * time.Minute)
+		}
+	}
 }
 
 func (s *Service) baesManagement() {
