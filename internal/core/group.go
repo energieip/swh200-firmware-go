@@ -438,7 +438,7 @@ func (s *Service) groupRun(group *Group) error {
 						s.setpointHvac(group, group.ShiftTemp)
 
 					case EventWago:
-						rlog.Info("Received WAGO event ", group)
+						rlog.Infof("Received WAGO event ", group.WagoConsigne)
 						s.setpointHvacWago(group)
 
 					case EventHvacConfig:
