@@ -12,6 +12,64 @@ import (
 	"github.com/romana/rlog"
 )
 
+type WagoEvent struct {
+	Mac      string `json:"mac"`
+	Consigne int    `json:"consigne"`
+}
+
+type WagoErrorEvent struct {
+	Mac string `json:"mac"`
+}
+
+//ToJSON dump struct in json
+func (driver WagoErrorEvent) ToJSON() (string, error) {
+	inrec, err := json.Marshal(driver)
+	if err != nil {
+		return "", err
+	}
+	return string(inrec), err
+}
+
+//ToWagoErrorEvent convert interface to Blind object
+func ToWagoErrorEvent(val interface{}) (*WagoErrorEvent, error) {
+	var driver WagoErrorEvent
+	inrec, err := json.Marshal(val)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(inrec, &driver)
+	return &driver, err
+}
+
+//ToJSON dump struct in json
+func (driver WagoEvent) ToJSON() (string, error) {
+	inrec, err := json.Marshal(driver)
+	if err != nil {
+		return "", err
+	}
+	return string(inrec), err
+}
+
+//ToWagoEvent convert interface to nano object
+func ToWagoEvent(val interface{}) (*WagoEvent, error) {
+	var driver WagoEvent
+	inrec, err := json.Marshal(val)
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(inrec, &driver)
+	return &driver, err
+}
+
+func (s *Service) sendInvalidWagoStatus(driver dwago.Wago) {
+	url := "/read/groups/error/wago"
+	evt := WagoErrorEvent{
+		Mac: driver.Mac,
+	}
+	dump, _ := evt.ToJSON()
+	s.localSendCommand(url, dump)
+}
+
 func (s *Service) removeWago(mac string) {
 	criteria := make(map[string]interface{})
 	criteria["Mac"] = mac
@@ -114,5 +172,23 @@ func (s *Service) onWagoStatus(client network.Client, msg network.Message) {
 	err = s.updateWagoStatus(driver)
 	if err != nil {
 		rlog.Error("Error during database update ", err.Error())
+	}
+	if driver.Error == 0 {
+		consigne := 0
+		for _, cron := range driver.CronJobs {
+			if cron.Action == "consigne" {
+				consigne = cron.Status
+				break
+			}
+		}
+		url := "/read/groups/events/wago"
+		evt := WagoEvent{
+			Mac:      driver.Mac,
+			Consigne: consigne,
+		}
+		dump, _ := evt.ToJSON()
+		s.localSendCommand(url, dump)
+	} else {
+		s.sendInvalidWagoStatus(driver)
 	}
 }

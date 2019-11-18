@@ -22,6 +22,7 @@ const (
 	EventManual       = "manual"
 	EventBlind        = "blind"
 	EventHvac         = "hvac"
+	EventWago         = "wago"
 	EventHvacConfig   = "hvacConfig"
 	EventResetDrivers = "resetDrivers"
 )
@@ -68,6 +69,30 @@ type Group struct {
 	StandbyHeat        int
 	StandbyCool        int
 	HvacsEffectMode    int
+	WagoConsigne       int
+}
+
+func (s *Service) onGroupsWagoEvent(client network.Client, msg network.Message) {
+	rlog.Debug(msg.Topic() + " : " + string(msg.Payload()))
+	var wago WagoEvent
+	err := json.Unmarshal(msg.Payload(), &wago)
+	if err != nil {
+		rlog.Error("Error during parsing", err.Error())
+		return
+	}
+
+	for grID, gr := range s.groups {
+		gr.WagoConsigne = wago.Consigne
+		go func(group Group, grID int) {
+			new := gm.GroupConfig{
+				Group:         grID,
+				HvacsHeatCool: &group.WagoConsigne,
+			}
+			event := make(map[string]*gm.GroupConfig)
+			event[EventWago] = &new
+			group.Event <- event
+		}(gr, grID)
+	}
 }
 
 func (s *Service) onGroupHvacEvent(client network.Client, msg network.Message) {
@@ -411,6 +436,10 @@ func (s *Service) groupRun(group *Group) error {
 					case EventHvac:
 						rlog.Info("Received HVAC event ", group)
 						s.setpointHvac(group, group.ShiftTemp)
+
+					case EventWago:
+						rlog.Info("Received WAGO event ", group)
+						s.setpointHvacWago(group)
 
 					case EventHvacConfig:
 						rlog.Info("Received HVAC Config event ", group)
@@ -1024,6 +1053,23 @@ func (s *Service) setpointBlind(group *Group, blind *int, slat *int) {
 func (s *Service) setpointHvac(group *Group, shift *int) {
 	for _, driver := range group.Runtime.Hvacs {
 		s.sendHvacGroupSetpoint(driver, shift)
+	}
+}
+
+func (s *Service) setpointHvacWago(group *Group) {
+	for _, driver := range group.Runtime.Hvacs {
+		cfg := dhvac.HvacConf{
+			Mac: driver,
+		}
+		value := dhvac.OCCUPANCY_ECONOMY
+		switch group.WagoConsigne {
+		case 0:
+			value = dhvac.OCCUPANCY_ECONOMY
+		case 1:
+			value = dhvac.OCCUPANCY_STANDBY
+		}
+		cfg.TargetMode = &value
+		s.updateHvacConfig(cfg)
 	}
 }
 

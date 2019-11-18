@@ -1,14 +1,14 @@
 hash: d411425b4f9db07589085d22323989d1ba481bfb0dd3cddbcc5288ab094b4b65
-updated: 2019-11-07T09:45:29.701880167+01:00
+updated: 2019-11-18T09:09:35.357100187+01:00
 imports:
 - name: github.com/cenkalti/backoff
   version: 2146c93394225c3732078705043ce9f26584d334
 - name: github.com/eclipse/paho.mqtt.golang
-  version: 825e8b38f891bed20340ddb2460dd5c541ab0542
+  version: 939f51659320414efe03753fc96228d3ac84e439
   subpackages:
   - packets
 - name: github.com/energieip/common-components-go
-  version: 4a42982a3d142dc82d6cf758d3e40662b14bd3a9
+  version: bbd2fd19f76cdca718cfefcad32b621ccfcf5afb
   subpackages:
   - pkg/database
   - pkg/dblind
@@ -29,7 +29,7 @@ imports:
   subpackages:
   - proto
 - name: github.com/gorilla/mux
-  version: f395758b854c4efa789b8c1e9b73479704c548cb
+  version: 2854a05fd3e2a9ecec0802bcb6eda09bbc0eea9f
 - name: github.com/gorilla/websocket
   version: c3e18be99d19e6b3e8f1559eea2c161a665c4b6b
 - name: github.com/hailocab/go-hostpool
@@ -48,17 +48,17 @@ imports:
 - name: github.com/sirupsen/logrus
   version: 67a7fdcf741f4d5cee82cb9800994ccfd4393ad0
 - name: golang.org/x/crypto
-  version: ed6320f186d4e69b2ba748dd0084746281301a8e
+  version: 497ca9f6d64f9bb73048a960b4098309edcd2205
   subpackages:
   - pbkdf2
 - name: golang.org/x/net
-  version: a882066a44e04a21d46e51451c71e131344e830e
+  version: f9c8255933865a6f8452ccf0cc47ac980da5ac56
   subpackages:
   - context
   - internal/socks
   - proxy
 - name: golang.org/x/sys
-  version: c1f44814a5cd81a6d1cb589ef1e528bc5d305e07
+  version: 2f86c98f3482ca877df5933731c2cdd38007a776
   subpackages:
   - unix
 - name: gopkg.in/fatih/pool.v2
