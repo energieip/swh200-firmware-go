@@ -73,7 +73,7 @@ type Group struct {
 }
 
 func (s *Service) onGroupsWagoEvent(client network.Client, msg network.Message) {
-	rlog.Debug(msg.Topic() + " : " + string(msg.Payload()))
+	rlog.Info(msg.Topic() + " : " + string(msg.Payload()))
 	var wago WagoEvent
 	err := json.Unmarshal(msg.Payload(), &wago)
 	if err != nil {

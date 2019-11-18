@@ -47,8 +47,7 @@ func (s *Service) localConnection() error {
 	cbkLocal["/read/group/+/error/hvac"] = s.onGroupHvacErrorEvent
 	cbkLocal["/read/group/+/events/nano"] = s.onGroupNanoEvent
 	cbkLocal["/read/group/+/error/nano"] = s.onGroupNanoErrorEvent
-	cbkLocal["/read/groups/events/nano"] = s.onGroupsWagoEvent
-	// cbkLocal["/read/groups/error/nano"] = s.onGroupsWagoErrorEvent
+	cbkLocal["/read/groups/events/wago"] = s.onGroupsWagoEvent
 	cbkLocal["/write/group/+/commands"] = s.onGroupCommand
 	cbkLocal["/write/cluster/group/+/commands"] = s.onClusterGroupCommand
 
