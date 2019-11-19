@@ -387,6 +387,7 @@ func (s *Service) sendDump() {
 				continue
 			} else {
 				rlog.Warn("HVAC " + driver.Mac + " no longer seen; drop it")
+				s.sendInvalidHvacStatus(*driver)
 				s.hvacs.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
 			}
@@ -412,6 +413,7 @@ func (s *Service) sendDump() {
 				continue
 			} else {
 				rlog.Warn("WAGO " + driver.Mac + " no longer seen; drop it")
+				s.sendInvalidWagoStatus(*driver)
 				s.wagos.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
 			}
@@ -437,6 +439,7 @@ func (s *Service) sendDump() {
 				continue
 			} else {
 				rlog.Warn("Nanos " + driver.Mac + " no longer seen; drop it")
+				s.sendInvalidNanoStatus(*driver)
 				s.nanos.Remove(driver.Mac)
 				s.driversSeen.Remove(driver.Mac)
 			}
@@ -776,6 +779,7 @@ func (s *Service) Run() error {
 							s.nanos = cmap.New()
 							s.wagos = cmap.New()
 							s.clusterID = 0
+							s.driversSeen = cmap.New()
 							s.groups = make(map[int]Group)
 							for mac := range s.cluster {
 								s.removeClusterMember(mac)
