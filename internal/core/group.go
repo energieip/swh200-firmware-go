@@ -85,8 +85,8 @@ func (s *Service) onGroupsWagoEvent(client network.Client, msg network.Message) 
 		gr.WagoConsigne = wago.Consigne
 		go func(group Group, grID int) {
 			new := gm.GroupConfig{
-				Group:         grID,
-				HvacsHeatCool: &group.WagoConsigne,
+				Group:           grID,
+				HvacsTargetMode: &group.WagoConsigne,
 			}
 			event := make(map[string]*gm.GroupConfig)
 			event[EventWago] = &new
@@ -1062,11 +1062,13 @@ func (s *Service) setpointHvacWago(group *Group) {
 			Mac: driver,
 		}
 		value := dhvac.OCCUPANCY_ECONOMY
-		switch group.WagoConsigne {
-		case 0:
-			value = dhvac.OCCUPANCY_ECONOMY
-		case 1:
-			value = dhvac.OCCUPANCY_STANDBY
+		if group.Runtime.HvacsTargetMode != nil {
+			switch *group.Runtime.HvacsTargetMode {
+			case 0:
+				value = dhvac.OCCUPANCY_ECONOMY
+			case 1:
+				value = dhvac.OCCUPANCY_STANDBY
+			}
 		}
 		cfg.TargetMode = &value
 		s.updateHvacConfig(cfg)
