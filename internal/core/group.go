@@ -1104,6 +1104,15 @@ func (s *Service) setpointHvacConfig(group *Group) {
 		if group.Runtime.HvacsTargetMode != nil {
 			cfg.TargetMode = group.Runtime.HvacsTargetMode
 		}
+		if group.Runtime.HvacsForcing6waysValve != nil {
+			cfg.Forcing6waysValve = group.Runtime.HvacsForcing6waysValve
+		}
+		if group.Runtime.HvacsForcingAutoBack != nil {
+			cfg.ForcingAutoBack = group.Runtime.HvacsForcingAutoBack
+		}
+		if group.Runtime.HvacsForcingDamper != nil {
+			cfg.ForcingDamper = group.Runtime.HvacsForcingDamper
+		}
 		s.updateHvacConfig(cfg)
 	}
 }
@@ -1324,6 +1333,38 @@ func (gr *Group) updateConfig(new *gm.GroupConfig) {
 	}
 
 	if new.HvacsTargetMode != nil {
+		go func() {
+			event := make(map[string]*gm.GroupConfig)
+			event[EventHvacConfig] = new
+			gr.Event <- event
+		}()
+	}
+
+	if new.HvacsHeatCool != nil {
+		go func() {
+			event := make(map[string]*gm.GroupConfig)
+			event[EventHvacConfig] = new
+			gr.Event <- event
+		}()
+	}
+
+	if new.HvacsForcing6waysValve != nil {
+		go func() {
+			event := make(map[string]*gm.GroupConfig)
+			event[EventHvacConfig] = new
+			gr.Event <- event
+		}()
+	}
+
+	if new.HvacsForcingAutoBack != nil {
+		go func() {
+			event := make(map[string]*gm.GroupConfig)
+			event[EventHvacConfig] = new
+			gr.Event <- event
+		}()
+	}
+
+	if new.HvacsForcingDamper != nil {
 		go func() {
 			event := make(map[string]*gm.GroupConfig)
 			event[EventHvacConfig] = new
