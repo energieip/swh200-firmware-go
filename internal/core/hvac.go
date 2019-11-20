@@ -23,6 +23,8 @@ type HvacEvent struct {
 	SetpointHeatStandby    int    `json:"setpointHeatStandby"`    // 1/10°C
 	TargetMode             int    `json:"targetMode"`             //TargetMode
 	OccManCmd1             int    `json:"occManCmd1"`
+	Forcing6WaysValve      int    `json:"forcing6WaysValve"`
+	ForcingDamper          int    `json:"forcingDamper"`
 }
 
 type HvacErrorEvent struct {
@@ -219,6 +221,8 @@ func (s *Service) onHvacStatus(client network.Client, msg network.Message) {
 			SetpointHeatStandby:    driver.SetpointStandbyHeat1,
 			TargetMode:             driver.TargetMode,
 			OccManCmd1:             driver.OccManCmd1,
+			Forcing6WaysValve:      driver.Forcing6WaysValve,
+			ForcingDamper:          driver.ForcingDamper,
 		}
 		dump, _ := evt.ToJSON()
 		s.clusterSendCommand(url, dump)
