@@ -70,9 +70,10 @@ type Group struct {
 	StandbyCool        int
 	HvacsEffectMode    int
 	WagoConsigne       int
-	hvacs6WaysValves   int
-	hvacsDamper        int
-	hvasHeatCool       int
+	Hvacs6WaysValves   int
+	HvacsDamper        int
+	HvacsHeatCool      int
+	HvacsShift         int
 }
 
 func (s *Service) onGroupsWagoEvent(client network.Client, msg network.Message) {
@@ -401,9 +402,9 @@ func (s *Service) dumpGroupStatus(group Group) error {
 		SetpointStandbyCool1:    group.StandbyCool,
 		HvacsEffectMode:         group.HvacsEffectMode,
 		HvacsTargetMode:         targetMode,
-		HvacsForcing6waysValve:  group.hvacs6WaysValves,
-		HvacsForcingDamper:      group.hvacsDamper,
-		HvacsHeatCool:           group.hvasHeatCool,
+		HvacsForcing6waysValve:  group.Hvacs6WaysValves,
+		HvacsForcingDamper:      group.HvacsDamper,
+		HvacsHeatCool:           group.HvacsHeatCool,
 	}
 
 	s.groupStatus.Set(strconv.Itoa(status.Group), status)
@@ -893,6 +894,7 @@ func (s *Service) computeHvacInfo(group *Group) {
 	forcing6ways := 0
 	forcingDamper := 0
 	heatCool := 0
+	shift := 0
 
 	for mac, driver := range group.Hvacs.Items() {
 		hvac, _ := ToHvacEvent(driver)
@@ -912,11 +914,13 @@ func (s *Service) computeHvacInfo(group *Group) {
 		forcing6ways = hvac.Forcing6WaysValve
 		forcingDamper = hvac.ForcingDamper
 		heatCool = hvac.HeatCool
+		shift = hvac.Shift
 		break
 	}
-	group.hvacs6WaysValves = forcing6ways
-	group.hvacsDamper = forcingDamper
-	group.hvasHeatCool = heatCool
+	group.Hvacs6WaysValves = forcing6ways
+	group.HvacsDamper = forcingDamper
+	group.HvacsHeatCool = heatCool
+	group.HvacsShift = shift
 	if refMac == "" {
 		//No sensors in this group
 		return
