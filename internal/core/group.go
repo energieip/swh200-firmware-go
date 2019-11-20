@@ -450,7 +450,7 @@ func (s *Service) groupRun(group *Group) error {
 
 					case EventHvacConfig:
 						rlog.Info("Received HVAC Config event ", group)
-						s.setpointHvacConfig(group)
+						s.setpointHvacConfig(group, e)
 
 					case EventResetDrivers:
 						rlog.Info("Received Reset EIP drivers ", group)
@@ -1094,44 +1094,22 @@ func (s *Service) setpointHvacWago(group *Group) {
 	}
 }
 
-func (s *Service) setpointHvacConfig(group *Group) {
+func (s *Service) setpointHvacConfig(group *Group, groupCfg *gm.GroupConfig) {
 	for _, driver := range group.Runtime.Hvacs {
 		cfg := dhvac.HvacConf{
 			Mac: driver,
 		}
-		if group.Runtime.SetpointOccupiedCool1 != nil {
-			cfg.SetpointCoolOccupied = group.Runtime.SetpointOccupiedCool1
-		}
-		if group.Runtime.SetpointOccupiedHeat1 != nil {
-			cfg.SetpointHeatOccupied = group.Runtime.SetpointOccupiedHeat1
-		}
-		if group.Runtime.SetpointUnoccupiedCool1 != nil {
-			cfg.SetpointCoolInoccupied = group.Runtime.SetpointUnoccupiedCool1
-		}
-		if group.Runtime.SetpointUnoccupiedHeat1 != nil {
-			cfg.SetpointHeatInoccupied = group.Runtime.SetpointUnoccupiedHeat1
-		}
-		if group.Runtime.SetpointStandbyCool1 != nil {
-			cfg.SetpointCoolStandby = group.Runtime.SetpointStandbyCool1
-		}
-		if group.Runtime.SetpointStandbyHeat1 != nil {
-			cfg.SetpointHeatStandby = group.Runtime.SetpointStandbyHeat1
-		}
-		if group.Runtime.HvacsHeatCool != nil {
-			cfg.HeatCool = group.Runtime.HvacsHeatCool
-		}
-		if group.Runtime.HvacsTargetMode != nil {
-			cfg.TargetMode = group.Runtime.HvacsTargetMode
-		}
-		if group.Runtime.HvacsForcing6waysValve != nil {
-			cfg.Forcing6waysValve = group.Runtime.HvacsForcing6waysValve
-		}
-		if group.Runtime.HvacsForcingAutoBack != nil {
-			cfg.ForcingAutoBack = group.Runtime.HvacsForcingAutoBack
-		}
-		if group.Runtime.HvacsForcingDamper != nil {
-			cfg.ForcingDamper = group.Runtime.HvacsForcingDamper
-		}
+		cfg.SetpointCoolOccupied = groupCfg.SetpointOccupiedCool1
+		cfg.SetpointHeatOccupied = groupCfg.SetpointOccupiedHeat1
+		cfg.SetpointCoolInoccupied = groupCfg.SetpointUnoccupiedCool1
+		cfg.SetpointHeatInoccupied = groupCfg.SetpointUnoccupiedHeat1
+		cfg.SetpointCoolStandby = groupCfg.SetpointStandbyCool1
+		cfg.SetpointHeatStandby = groupCfg.SetpointStandbyHeat1
+		cfg.HeatCool = groupCfg.HvacsHeatCool
+		cfg.TargetMode = groupCfg.HvacsTargetMode
+		cfg.Forcing6waysValve = groupCfg.HvacsForcing6waysValve
+		cfg.ForcingAutoBack = groupCfg.HvacsForcingAutoBack
+		cfg.ForcingDamper = groupCfg.HvacsForcingDamper
 		s.updateHvacConfig(cfg)
 	}
 }
