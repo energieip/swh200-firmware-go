@@ -25,6 +25,7 @@ type HvacEvent struct {
 	OccManCmd1             int    `json:"occManCmd1"`
 	Forcing6WaysValve      int    `json:"forcing6WaysValve"`
 	ForcingDamper          int    `json:"forcingDamper"`
+	HeatCool               int    `json:"heatCool"`
 }
 
 type HvacErrorEvent struct {
@@ -223,6 +224,7 @@ func (s *Service) onHvacStatus(client network.Client, msg network.Message) {
 			OccManCmd1:             driver.OccManCmd1,
 			Forcing6WaysValve:      driver.Forcing6WaysValve,
 			ForcingDamper:          driver.ForcingDamper,
+			HeatCool:               driver.HeatCool1,
 		}
 		dump, _ := evt.ToJSON()
 		s.clusterSendCommand(url, dump)
