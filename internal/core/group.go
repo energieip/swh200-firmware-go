@@ -2,6 +2,7 @@ package core
 
 import (
 	"encoding/json"
+	"math"
 	"strconv"
 	"strings"
 	"time"
@@ -449,7 +450,7 @@ func (s *Service) groupRun(group *Group) error {
 						s.setpointHvacWago(group)
 
 					case EventHvacConfig:
-						rlog.Info("Received HVAC Config event ", group)
+						// rlog.Info("Received HVAC Config event ", group)
 						s.setpointHvacConfig(group, e)
 
 					case EventResetDrivers:
@@ -677,7 +678,7 @@ func (s *Service) computeBrightness(group *Group) {
 		return
 	}
 
-	group.Brightness = bright / nbValidSensors
+	brightness := float64(bright) / float64(nbValidSensors)
 
 	sensorRule := gm.SensorAverage
 	if group.Runtime.SensorRule != nil {
@@ -698,7 +699,7 @@ func (s *Service) computeBrightness(group *Group) {
 
 		switch sensorRule {
 		case gm.SensorAverage:
-			group.Brightness += sensor.Brightness / nbValidSensors
+			brightness += float64(sensor.Brightness) / float64(nbValidSensors)
 		case gm.SensorMax:
 			if group.Brightness < sensor.Brightness {
 				group.Brightness = sensor.Brightness
@@ -708,6 +709,9 @@ func (s *Service) computeBrightness(group *Group) {
 				group.Brightness = sensor.Brightness
 			}
 		}
+	}
+	if sensorRule == gm.SensorAverage {
+		group.Brightness = int(math.Round(brightness))
 	}
 }
 
@@ -738,8 +742,8 @@ func (s *Service) computeSensorTemperatureAndHumidity(group *Group) {
 		return
 	}
 
-	group.CeilingTemperature = temp / nbValidSensors
-	group.CeilingHumidity = hum / nbValidSensors
+	ceilingTemperature := float64(temp) / float64(nbValidSensors)
+	ceilingHumidity := float64(hum) / float64(nbValidSensors)
 
 	sensorRule := gm.SensorAverage
 	if group.Runtime.SensorRule != nil {
@@ -765,8 +769,8 @@ func (s *Service) computeSensorTemperatureAndHumidity(group *Group) {
 			if mac == refMac {
 				continue
 			}
-			group.CeilingTemperature += sensor.Temperature / nbValidSensors
-			group.CeilingHumidity += sensor.Humidity / nbValidSensors
+			ceilingTemperature += float64(sensor.Temperature) / float64(nbValidSensors)
+			ceilingHumidity += float64(sensor.Humidity) / float64(nbValidSensors)
 		case gm.SensorMax:
 			if group.CeilingHumidity < sensor.Humidity {
 				group.CeilingHumidity = sensor.Humidity
@@ -782,6 +786,10 @@ func (s *Service) computeSensorTemperatureAndHumidity(group *Group) {
 				group.CeilingTemperature = sensor.Temperature
 			}
 		}
+	}
+	if sensorRule == gm.SensorAverage {
+		group.CeilingTemperature = int(math.Round(ceilingTemperature))
+		group.CeilingHumidity = int(math.Round(ceilingHumidity))
 	}
 }
 
@@ -816,10 +824,10 @@ func (s *Service) computeNanosenseInfo(group *Group) {
 		return
 	}
 
-	group.Temperature = temp / nbValidSensors
-	group.Hygrometry = hum / nbValidSensors
-	group.CO2 = co2 / nbValidSensors
-	group.COV = cov / nbValidSensors
+	temperature := float64(temp) / float64(nbValidSensors)
+	hygrometry := float64(hum) / float64(nbValidSensors)
+	CO2 := float64(co2) / float64(nbValidSensors)
+	COV := float64(cov) / float64(nbValidSensors)
 
 	sensorRule := gm.SensorAverage
 	if group.Runtime.SensorRule != nil {
@@ -847,10 +855,10 @@ func (s *Service) computeNanosenseInfo(group *Group) {
 			if mac == refMac {
 				continue
 			}
-			group.Temperature += nano.Temperature / nbValidSensors
-			group.Hygrometry += nano.Hygrometry / nbValidSensors
-			group.COV += nano.COV / nbValidSensors
-			group.CO2 += nano.CO2 / nbValidSensors
+			temperature += float64(nano.Temperature) / float64(nbValidSensors)
+			hygrometry += float64(nano.Hygrometry) / float64(nbValidSensors)
+			COV += float64(nano.COV) / float64(nbValidSensors)
+			CO2 += float64(nano.CO2) / float64(nbValidSensors)
 		case gm.SensorMax:
 			if group.Hygrometry < nano.Hygrometry {
 				group.Hygrometry = nano.Hygrometry
@@ -878,6 +886,12 @@ func (s *Service) computeNanosenseInfo(group *Group) {
 				group.COV = nano.COV
 			}
 		}
+	}
+	if sensorRule == gm.SensorAverage {
+		group.Temperature = int(math.Round(temperature))
+		group.Hygrometry = int(math.Round(hygrometry))
+		group.COV = int(math.Round(COV))
+		group.CO2 = int(math.Round(CO2))
 	}
 }
 
@@ -922,23 +936,23 @@ func (s *Service) computeHvacInfo(group *Group) {
 	group.HvacsHeatCool = heatCool
 	group.HvacsShift = shift
 	if refMac == "" {
-		//No sensors in this group
+		//No hvac in this group
 		return
 	}
 	nbValids := group.Hvacs.Count() - group.HvacsIssue.Count()
 	if nbValids <= 0 {
-		//no valid sensor found
+		//no valid hvac found
 		return
 	}
 
 	group.HvacsEffectMode = occMan
 
-	group.OccupCool = occupCool / nbValids
-	group.OccupHeat = occupHeat / nbValids
-	group.UnoccupHeat = unoccupHeat / nbValids
-	group.UnoccupCool = unoccupCool / nbValids
-	group.StandbyCool = stdbyCool / nbValids
-	group.StandbyHeat = stdbyHeat / nbValids
+	grOccupCool := float64(occupCool) / float64(nbValids)
+	grOccupHeat := float64(occupHeat) / float64(nbValids)
+	grUnoccupHeat := float64(unoccupHeat) / float64(nbValids)
+	grUnoccupCool := float64(unoccupCool) / float64(nbValids)
+	grStandbyCool := float64(stdbyCool) / float64(nbValids)
+	grStandbyHeat := float64(stdbyHeat) / float64(nbValids)
 
 	sensorRule := gm.SensorAverage
 	if group.Runtime.SensorRule != nil {
@@ -968,12 +982,12 @@ func (s *Service) computeHvacInfo(group *Group) {
 			if mac == refMac {
 				continue
 			}
-			group.OccupCool += hvac.SetpointCoolOccupied / nbValids
-			group.OccupHeat += hvac.SetpointHeatOccupied / nbValids
-			group.UnoccupHeat += hvac.SetpointHeatInoccupied / nbValids
-			group.UnoccupCool += hvac.SetpointCoolInoccupied / nbValids
-			group.StandbyCool += hvac.SetpointCoolStandby / nbValids
-			group.StandbyHeat += hvac.SetpointHeatStandby / nbValids
+			grOccupCool += float64(hvac.SetpointCoolOccupied) / float64(nbValids)
+			grOccupHeat += float64(hvac.SetpointHeatOccupied) / float64(nbValids)
+			grUnoccupHeat += float64(hvac.SetpointHeatInoccupied) / float64(nbValids)
+			grUnoccupCool += float64(hvac.SetpointCoolInoccupied) / float64(nbValids)
+			grStandbyCool += float64(hvac.SetpointCoolStandby) / float64(nbValids)
+			grStandbyHeat += float64(hvac.SetpointHeatStandby) / float64(nbValids)
 		case gm.SensorMax:
 			if group.OccupCool < hvac.SetpointCoolOccupied {
 				group.OccupCool = hvac.SetpointCoolOccupied
@@ -1013,6 +1027,14 @@ func (s *Service) computeHvacInfo(group *Group) {
 				group.StandbyHeat = hvac.SetpointHeatStandby
 			}
 		}
+	}
+	if sensorRule == gm.SensorAverage {
+		group.OccupCool = int(math.Round(grOccupCool))
+		group.OccupHeat = int(math.Round(grOccupHeat))
+		group.UnoccupHeat = int(math.Round(grUnoccupHeat))
+		group.UnoccupCool = int(math.Round(grUnoccupCool))
+		group.StandbyCool = int(math.Round(grStandbyCool))
+		group.StandbyHeat = int(math.Round(grStandbyHeat))
 	}
 }
 
@@ -1095,6 +1117,9 @@ func (s *Service) setpointHvacWago(group *Group) {
 }
 
 func (s *Service) setpointHvacConfig(group *Group, groupCfg *gm.GroupConfig) {
+	requestBody, _ := json.Marshal(groupCfg)
+
+	rlog.Infof("Group %v Send new parameters to HVACs: %v", group.Runtime.Group, string(requestBody))
 	for _, driver := range group.Runtime.Hvacs {
 		cfg := dhvac.HvacConf{
 			Mac: driver,
