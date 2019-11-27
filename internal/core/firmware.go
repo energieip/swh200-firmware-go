@@ -463,6 +463,14 @@ func (s *Service) sendDump() {
 					if err != nil {
 						rlog.Errorf("Could not send setup to the modbus2mqtt service %v status %v", wago.Mac, err.Error())
 					}
+				} else {
+					if len(wago.Nanosenses) != s.nanos.Count() {
+						dump, _ := wago.ToJSON()
+						err := s.localSendCommand("/write/wago/"+wago.Mac+"/"+pconst.UrlSetup, dump)
+						if err != nil {
+							rlog.Errorf("Could not send setup to the modbus2mqtt service %v status %v", wago.Mac, err.Error())
+						}
+					}
 				}
 			}
 		}
@@ -556,7 +564,7 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 			crons = append(crons, cron)
 		}
 		wagoDev.CronJobs = crons
-		s.prepareWagoSetup(wagoDev)
+		database.SaveWagoConfig(s.db, wagoDev)
 	}
 
 	for _, nano := range switchConfig.NanosSetup {
@@ -617,7 +625,7 @@ func (s *Service) updateConfiguration(switchConfig sd.SwitchConfig) {
 		}
 		nanos = append(nanos, nanoDev)
 		wago.Nanosenses = nanos
-		s.prepareWagoSetup(*wago)
+		database.SaveWagoConfig(s.db, *wago)
 	}
 
 	for _, user := range switchConfig.Users {
